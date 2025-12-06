@@ -27,50 +27,83 @@ import HeroPage from '../components/HeroPage.vue'
 import MemberSpotlight from '../components/MemberSpotlight.vue'
 import NewsCard from '../components/NewsCard.vue'
 
-/* ===== Slides & News From API ===== */
+/* ===== State ===== */
 const slides = ref([])
 const news   = ref([])
+const loading = ref(true)
+const err = ref(null)
 
-function mapSlide(s) {
+/* ===== Utils ===== */
+function asList(payload) {
+  // Terima: {results:[...]} ATAU [...]
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload.results)) return payload.results
+  return []
+}
+
+function mapSlide(s = {}) {
+  // dukung beberapa kemungkinan nama field
+  const img = s.image || s.cover_image || s.hero_image || s.bg_image || ''
   return {
+    id: s.id ?? s.pk ?? String(Math.random()).slice(2),
     title: s.title || '',
-    subtitle: s.subtitle || '',
-    image: absUrl(s.image || ''),   
+    subtitle: s.subtitle || s.caption || '',
+    image: absUrl(img),
+    link: s.link || s.cta_url || null,
   }
 }
 
-function mapNews(n) {
+function mapNews(n = {}) {
+  const img = n.cover_image || n.image || n.thumbnail || ''
   return {
-    id: n.id,
-    title: n.title,
-    date: n.published_at,                 
-    excerpt: n.excerpt,
-    image: absUrl(n.cover_image || ''),
-    link: `/news/${n.slug}`,              
+    id: n.id ?? n.pk,
+    title: n.title ?? '',
+    date: n.published_at || n.created_at || n.updated_at || '',
+    excerpt: n.excerpt || n.summary || '',
+    image: absUrl(img),
+    link: n.slug ? `/news/${n.slug}` : (n.url || '#'),
   }
 }
 
+/* ===== Fetch ===== */
 onMounted(async () => {
+  loading.value = true
+  err.value = null
   try {
-    const [{ data: home }, { data: newsResp }] = await Promise.all([
+    // 1) home (harusnya sudah mengandung slides)
+    const [{ data: home }] = await Promise.all([
       api.get('home/'),
-      api.get('news/') 
     ])
-    slides.value = (home?.slides || []).map(mapSlide)
-    news.value   = (newsResp?.results || []).slice(0, 6).map(mapNews)
+
+    const homeSlides = asList(home?.slides).map(mapSlide)
+    slides.value = homeSlides
+
+    // 2) kalau slides dari home kosong → fallback ke endpoint khusus
+    if (slides.value.length === 0) {
+      const { data: hs } = await api.get('heroslide/') // alias 'hero-slides/' juga disiapkan
+      slides.value = asList(hs).map(mapSlide)
+    }
+
+    // 3) news (ambil 6 teratas, dukung paginated/non)
+    const { data: newsResp } = await api.get('news/')
+    news.value = asList(newsResp).slice(0, 6).map(mapNews)
+
   } catch (e) {
     console.warn('Failed to load homepage data:', e)
+    err.value = e
+  } finally {
+    loading.value = false
   }
 })
 
 /* ===== Spotlight ===== */
 const member = {
   name: 'KIRSTY SWORD GUSMAO',
-  role: 'KIRSTY SWORD GUSMAO: EDUCATION IS VERYIMPORTANT TO SAVE LIVES, SO THE WORK THAT HALIKU DOES IS VERY IMPORTANT.',
+  role: 'KIRSTY SWORD GUSMAO: EDUCATION IS VERY IMPORTANT TO SAVE LIVES, SO THE WORK THAT HALIKU DOES IS VERY IMPORTANT.',
   photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop',
   bio: [
-    'Thousands of people live in difficult situations because of cancer and this is a concern for all nations. According to the world data, cancer has killed more than 8 million people and of these, about 4 million people die between the ages of 30 and 69 years.The World Cancer Day. The 4th of February is an recognition of the strength of society in all countries for their efforts and collaboration to create a cancer-free world, including taking real action to close gaps in care for people who are diagnosed with cancer.',
-    'Every year, this celebration involves a range of activities and events around the world to increase community consent to prevent early childhood from contributing to cancer. In Timor-Leste, the Alola Foundation, through the HALIKU Sub-program (I chose To Curate) and in collaboration with the National Commission for breast cancer in Timor-Leste (KNKSTL), regularly organised activities to celebrate the World Day."The continuation of HALIKU work is very important. We continue to see women who are presenting breast cancer in an advanced phase because they are more connected to traditional medicines, "reinforcing Ms. Kirsty Sword Gusmao, a founder of Alola and HALIKU.The former First Lady of Timor-Leste  also explained that until now the HALIKU sub-program is a component of the intervention of mothers and children from the Alola Foundation which has provided a reference to hundreds of women, health services to receive diagnosis and treatment. The founder of Alola also asked that fellow women not be ashamed when they experience symptoms of cancer because this factor of shame is an obstacle to being treated properly.'
+    'Thousands of people live in difficult situations because of cancer and this is a concern for all nations...',
   ],
   socials: { twitter: '#', facebook: '#', instagram: '#' }
 }

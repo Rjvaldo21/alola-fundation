@@ -35,9 +35,9 @@
         <!-- Accordion -->
         <div class="cta-accordion cards" ref="accGroup">
           <template v-if="accordion.length">
-            <details v-for="it in accordion" :key="it.id" class="toggle card">
+            <details v-for="(it, idx) in accordion" :key="it.id ?? idx" class="toggle card">
               <summary class="chev">{{ it.title }}</summary>
-              <div class="panel prose" v-html="it.body_html"></div>
+              <div class="panel prose" v-html="it.body_html || it.body || ''"></div>
             </details>
           </template>
           <template v-else>
@@ -80,8 +80,14 @@
           <video :src="current.video" autoplay loop muted playsinline></video>
         </template>
 
-        <template v-else>
+        <template v-else-if="current.image">
           <img :src="current.image" alt="" />
+        </template>
+
+        <template v-else>
+          <div style="width:100%;height:100%;display:grid;place-items:center;background:#eef3ff">
+            <small>No media</small>
+          </div>
         </template>
       </div>
 
@@ -103,6 +109,51 @@ const heroYtId     = ref('')
 const props = defineProps({
   slides: { type: Array, default: () => [] }
 })
+
+/** Parser yang lebih toleran: cari array slide di dalam object secara rekursif */
+function parseRowsDeep(raw) {
+  // Jika sudah array
+  if (Array.isArray(raw)) return raw
+
+  // Jika string, coba JSON.parse (kalau HTML, anggap kosong)
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (t.startsWith('<!doctype') || t.startsWith('<html')) return []
+    try { raw = JSON.parse(raw) } catch { return [] }
+  }
+
+  if (!raw || typeof raw !== 'object') return []
+
+  // Konvensi umum API
+  const direct = raw.results ?? raw.items ?? raw.data ?? raw.list ?? raw.rows
+  if (Array.isArray(direct)) return direct
+
+  // Satu objek yang terlihat seperti slide → jadikan array satuan
+  const looksLikeSlide = (o) =>
+    o && typeof o === 'object' && (
+      'title' in o || 'subtitle' in o || 'image' in o || 'image_url' in o ||
+      'video' in o || 'video_url' in o || 'youtube' in o || 'youtube_url' in o
+    )
+  if (looksLikeSlide(raw)) return [raw]
+
+  // Deep scan: cari array pertama berisi objek (prioritaskan yang mirip slide)
+  let fallbackArray = null
+  const stack = [raw]
+  while (stack.length) {
+    const cur = stack.pop()
+    if (Array.isArray(cur)) {
+      if (cur.length && typeof cur[0] === 'object') {
+        if (looksLikeSlide(cur[0])) return cur
+        fallbackArray = fallbackArray || cur
+      }
+      continue
+    }
+    if (cur && typeof cur === 'object') {
+      for (const k of Object.keys(cur)) stack.push(cur[k])
+    }
+  }
+  return Array.isArray(fallbackArray) ? fallbackArray : []
+}
 
 const extractId = (urlOrId) => {
   if (!urlOrId) return ''
@@ -133,13 +184,18 @@ const embedUrl = (id) => {
 }
 
 function mapSlide(s) {
-  const ytRaw = s.youtube_url || s.youtube || s.youtube_id || s.yt || s.yt_id || ''
+  const ytRaw =
+    s.youtube_url ?? s.youtube ?? s.youtube_id ?? s.yt ?? s.yt_id ?? s.video_youtube ?? ''
+  const img =
+    s.image ?? s.image_url ?? s.cover ?? s.cover_url ?? s.poster ?? ''
+  const vid =
+    s.video ?? s.video_url ?? s.media ?? s.media_url ?? ''
   return {
-    id:       s.id,
-    title:    s.title || '',
-    subtitle: s.subtitle || '',
-    image:    absUrl(s.image || s.image_url || ''),
-    video:    absUrl(s.video || s.video_url || ''),
+    id:       s.id ?? crypto.randomUUID(),
+    title:    s.title ?? '',
+    subtitle: s.subtitle ?? s.sub_title ?? '',
+    image:    absUrl(img),
+    video:    absUrl(vid),
     youtube:  ytRaw,
     youtubeId: extractId(ytRaw),
     _raw: s,
@@ -170,19 +226,58 @@ watch(accordion, () => bindAccordionToggles())
 
 onMounted(async () => {
   try {
-    const slidesRes = await api.get('heroslide/')
-    const rows = Array.isArray(slidesRes.data) ? slidesRes.data : (slidesRes.data?.results || [])
+    // -------------------
+    // heroslide
+    // -------------------
+    const slidesRes = await api.get('heroslide/', { params: { page_size: 100 } })
+    console.log(
+      '[Hero] heroslide() status:', slidesRes.status,
+      'ctype:', slidesRes.headers?.['content-type'],
+      'typeof data:', typeof slidesRes.data,
+      'keys:', slidesRes.data && typeof slidesRes.data === 'object' ? Object.keys(slidesRes.data) : 'n/a'
+    )
+
+    const rows = parseRowsDeep(slidesRes.data)
+    if (!rows.length) {
+      console.warn(
+        '[Hero] heroslide(): masih kosong. Cuplikan payload:',
+        JSON.stringify(slidesRes.data, null, 2).slice(0, 400)
+      )
+    }
     const mapped = rows.map(mapSlide)
     slides.value = mapped
 
-    const firstRaw = rows[0] || {}
-    const firstId  = extractId(firstRaw.youtube_url || firstRaw.youtube || firstRaw.youtube_id || firstRaw.yt || firstRaw.yt_id || '')
-    heroYtId.value = firstId || extractId(mapped.find(s => s.youtubeId)?.youtubeId || '')
+    // pilih sumber heroYtId yang valid dulu
+    const firstWithYt = mapped.find(s => s.youtubeId)
+    const firstRaw    = rows[0] || {}
+    const firstRawYt  = extractId(
+      firstRaw.youtube_url ?? firstRaw.youtube ?? firstRaw.youtube_id ?? firstRaw.yt ?? firstRaw.yt_id ?? ''
+    )
+    heroYtId.value = firstWithYt?.youtubeId || firstRawYt || ''
 
+    // -------------------
+    // home
+    // -------------------
     const homeRes = await api.get('home/')
-    heroTitle.value    = homeRes.data?.site?.hero_title || ''
-    heroSubtitle.value = homeRes.data?.site?.hero_subtitle || ''
-    accordion.value    = homeRes.data?.accordion || []
+    console.log('[Hero] home() status:', homeRes.status, 'ctype:', homeRes.headers?.['content-type'], 'typeof data:', typeof homeRes.data)
+    let H = homeRes.data
+    if (typeof H === 'string') {
+      try { H = JSON.parse(H) } catch (e) {
+        console.warn('[Hero] home() string non-JSON. Cuplikan:', H.slice(0,180))
+        H = {}
+      }
+    }
+    heroTitle.value    = H?.site?.hero_title ?? H?.hero_title ?? H?.site_title ?? ''
+    heroSubtitle.value = H?.site?.hero_subtitle ?? H?.hero_subtitle ?? H?.subtitle ?? ''
+    accordion.value    = H?.accordion ?? H?.accordion_items ?? H?.faqs ?? []
+
+    // ringkas state di console agar mudah cek
+    console.log('[Hero] state =>', {
+      slidesCount: slides.value.length,
+      hasYt: !!heroYtId.value,
+      heroTitle: heroTitle.value,
+      accordionCount: accordion.value.length
+    })
   } catch (e) {
     console.warn('Failed to load hero data:', e)
   }
@@ -191,6 +286,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => detach())
 </script>
+
 
 <style scoped>
 /* === General Style === */

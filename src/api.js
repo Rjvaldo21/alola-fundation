@@ -1,13 +1,20 @@
 import axios from 'axios'
 
-// Gunakan env Vite kalau ada, default ke http://localhost:8000
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
-export const api = axios.create({ baseURL: `${API_BASE}/api/` })
+// Ambil dari env saat build (PROD). Saat dev tanpa env, fallback ke '/api/' (proxy Vite)
+const ENV_BASE = (import.meta.env?.VITE_API_BASE_URL || '').trim()
+const BASE_URL = ENV_BASE || '/api/'
 
-// Resolve URL file/media dari Django (relatif "/media/...") jadi absolut
-export function absUrl(u) {
-  if (!u) return ''
-  if (/^https?:\/\//i.test(u)) return u
-  if (u.startsWith('/')) return `${API_BASE}${u}`
-  return `${API_BASE}/${u}`
+// Pastikan selalu berakhiran '/'
+const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/'
+
+export const api = axios.create({
+  baseURL: normalizedBase,
+  timeout: 15000,
+})
+
+// Helper untuk membuat URL absolut (berguna untuk gambar/file dari API)
+export function absUrl(path) {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path)) return path
+  return normalizedBase + String(path).replace(/^\/+/, '')
 }

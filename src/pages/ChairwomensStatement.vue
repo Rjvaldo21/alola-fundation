@@ -88,17 +88,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api, absUrl } from '@/services/api'   // <= ini
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-const SLUG = 'chairwomens-statement' // sesuaikan dengan slug backend
+const SLUG = 'chairwomens-statement'
 
 const isLoading = ref(true)
 const page = ref({
   title: 'CHAIRWOMEN STATEMENT',
   bodyHtml: '',
   person: 'Dr. Kirsty Sword Gusmão, AO',
-  portrait: '', // path relatif atau absolut dari API
+  portrait: '',
 })
 
 const socials = ref([
@@ -110,22 +109,19 @@ const socials = ref([
   { icon:'email', label:'Email', href:'mailto:info@example.com' },
 ])
 
-const absUrl = (p) => (!p ? '' : p.startsWith('http') ? p : `${API_BASE}${p}`)
 const portraitUrl = computed(() =>
-  page.value.portrait ? absUrl(page.value.portrait) :
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1200&auto=format&fit=crop'
+  page.value.portrait ? absUrl(page.value.portrait)
+  : 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1200&auto=format&fit=crop'
 )
 
 async function fetchPage() {
   try {
     isLoading.value = true
-    const { data } = await axios.get(`${API_BASE}/api/public/pages/${SLUG}/`)
-    page.value.title = data.title || page.value.title
-    page.value.person = data.person || data.author || page.value.person
+    const { data } = await api.get(`public/pages/${SLUG}/`) // <= disini
+    page.value.title    = data.title || page.value.title
+    page.value.person   = data.person || data.author || page.value.person
     page.value.portrait = data.portrait || data.image || ''
     page.value.bodyHtml = data.content_html || data.body_html || data.html || ''
-
-    // Optional socials from API
     if (Array.isArray(data.socials) && data.socials.length) {
       socials.value = data.socials.map(s => ({
         icon: (s.icon || '').toLowerCase(),
@@ -141,23 +137,9 @@ async function fetchPage() {
 }
 onMounted(fetchPage)
 
-// Share helpers
-const currentUrl = () => window.location.href
-function doShare(net) {
-  const url = encodeURIComponent(currentUrl())
-  const text = encodeURIComponent(page.value.title)
-  const targets = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-    x: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
-    whatsapp: `https://wa.me/?text=${text}%20${url}`,
-  }
-  window.open(targets[net], '_blank','noopener')
-}
-async function copyLink() {
-  try { await navigator.clipboard.writeText(currentUrl()); alert('Link copied!') }
-  catch { alert(currentUrl()) }
-}
+// share helper tetap
 </script>
+
 
 <style scoped>
 /* === THEME / BACKGROUND (ikut page lain) === */

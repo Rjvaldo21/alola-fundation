@@ -74,7 +74,7 @@
   import { ref, computed, onMounted } from 'vue'
   import axios from 'axios'
   
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000'
+  const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'http://localhost:8000'
   
   const loading = ref(true)
   const bodyHtml = ref('')
