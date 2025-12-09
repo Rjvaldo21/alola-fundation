@@ -6,18 +6,6 @@
       <span class="soft d1"></span>
       <span class="soft d2"></span>
 
-      <!-- badge biru About Us -->
-      <!-- <span class="badge">
-        <span class="badge-text">
-          About<br/>Us
-        </span>
-      </span> -->
-
-      <!-- tiga diamond putih kecil di kanan -->
-      <!-- <span class="tile t1"></span>
-      <span class="tile t2"></span>
-      <span class="tile t3"></span> -->
-
       <!-- dotted grid bawah kiri -->
       <span class="dotgrid"></span>
     </div>
@@ -27,32 +15,27 @@
 
     <div class="container hero-inner">
       <div class="copy">
-        <h1 class="h1">{{ heroTitle || current.title || 'Create Business Solution' }}</h1>
+        <h1 class="h1">
+          {{ heroTitle || current.title || 'Create Business Solution' }}
+        </h1>
         <p class="lead">
-          {{ heroSubtitle || current.subtitle || 'We work with international startups, help entrepreneurs launch for the long term.' }}
+          {{
+            heroSubtitle ||
+              current.subtitle ||
+              'We work with international startups, help entrepreneurs launch for the long term.'
+          }}
         </p>
 
         <!-- Accordion -->
         <div class="cta-accordion cards" ref="accGroup">
-          <template v-if="accordion.length">
-            <details v-for="(it, idx) in accordion" :key="it.id ?? idx" class="toggle card">
-              <summary class="chev">{{ it.title }}</summary>
-              <div class="panel prose" v-html="it.body_html || it.body || ''"></div>
-            </details>
-          </template>
-          <template v-else>
-            <details class="toggle card">
-              <summary class="chev">MENSAGEM KIRSTY SWORD GUSMÃO...</summary>
-              <div class="panel prose">
-                <p>Email: <a href="mailto:info@alola.tl">info@alola.tl</a></p>
-                <p>...</p>
-              </div>
-            </details>
-            <details class="toggle card">
-              <summary class="chev">A MESSAGE FROM CEO ALOLA</summary>
-              <div class="panel prose"><p>...</p></div>
-            </details>
-          </template>
+          <details
+            v-for="(it, idx) in accordion"
+            :key="it.id ?? idx"
+            class="toggle card"
+          >
+            <summary class="chev">{{ it.title }}</summary>
+            <div class="panel prose" v-html="it.body_html || it.body || ''"></div>
+          </details>
         </div>
       </div>
     </div>
@@ -65,6 +48,7 @@
       </div>
 
       <div class="diamond">
+        <!-- YouTube (otomatis dari URL) -->
         <iframe
           v-if="heroYtId"
           class="yt"
@@ -76,6 +60,7 @@
           allowfullscreen
         ></iframe>
 
+        <!-- fallback kalau mau gambar/video lokal -->
         <template v-else-if="current.video">
           <video :src="current.video" autoplay loop muted playsinline></video>
         </template>
@@ -85,7 +70,9 @@
         </template>
 
         <template v-else>
-          <div style="width:100%;height:100%;display:grid;place-items:center;background:#eef3ff">
+          <div
+            style="width:100%;height:100%;display:grid;place-items:center;background:#eef3ff"
+          >
             <small>No media</small>
           </div>
         </template>
@@ -97,67 +84,73 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { api, absUrl } from '@/api'
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  watch,
+} from 'vue'
 
-const heroTitle    = ref('')
-const heroSubtitle = ref('')
-const slides       = ref([])         
-const accordion    = ref([])
-const heroYtId     = ref('')
+// ====== DUMMY DATA LOCAL (TANPA API) ======
 
-const props = defineProps({
-  slides: { type: Array, default: () => [] }
-})
+// Judul & subjudul static / dummy
+const heroTitle = ref('Create Business Solution')
+const heroSubtitle = ref(
+  'We work with international startups, help entrepreneurs launch for the long term.'
+)
 
-/** Parser yang lebih toleran: cari array slide di dalam object secara rekursif */
-function parseRowsDeep(raw) {
-  // Jika sudah array
-  if (Array.isArray(raw)) return raw
+// Dummy slides (isi URL YouTube di sini saja)
+const slides = ref([
+  {
+    id: 1,
+    title: 'Empowering Women & Children',
+    subtitle:
+      'Alola Foundation works to improve the lives of women and children in Timor-Leste.',
+    image: '', // bisa isi path gambar lokal di sini
+    video: '', // atau video lokal
+    youtube: 'https://youtu.be/csaObXq0Fhc?si=CsaCA8p4M6N08sLw',
+  },
+])
 
-  // Jika string, coba JSON.parse (kalau HTML, anggap kosong)
-  if (typeof raw === 'string') {
-    const t = raw.trim()
-    if (t.startsWith('<!doctype') || t.startsWith('<html')) return []
-    try { raw = JSON.parse(raw) } catch { return [] }
-  }
+// Dummy accordion / FAQ
+const accordion = ref([
+  {
+    id: 1,
+    title: 'MENSAGEM KIRSTY SWORD GUSMÃO...',
+    body_html: `
+      <p>Email: <a href="mailto:info@alola.tl">info@alola.tl</a></p>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+        Alola Foundation supports education, maternal and child health, 
+        economic empowerment and advocacy programs across Timor-Leste.
+      </p>
+    `,
+  },
+  {
+    id: 2,
+    title: 'A MESSAGE FROM CEO ALOLA',
+    body_html: `
+      <p>
+        Welcome to the Alola Foundation. Our mission is to improve the lives of 
+        women and children through education, advocacy and community programs.
+      </p>
+      <p>
+        Together we can build a stronger future for Timor-Leste.
+      </p>
+    `,
+  },
+])
 
-  if (!raw || typeof raw !== 'object') return []
+// Ambil slide current (untuk image/video/yt fallback)
+const current = computed(() => slides.value[0] || {})
 
-  // Konvensi umum API
-  const direct = raw.results ?? raw.items ?? raw.data ?? raw.list ?? raw.rows
-  if (Array.isArray(direct)) return direct
-
-  // Satu objek yang terlihat seperti slide → jadikan array satuan
-  const looksLikeSlide = (o) =>
-    o && typeof o === 'object' && (
-      'title' in o || 'subtitle' in o || 'image' in o || 'image_url' in o ||
-      'video' in o || 'video_url' in o || 'youtube' in o || 'youtube_url' in o
-    )
-  if (looksLikeSlide(raw)) return [raw]
-
-  // Deep scan: cari array pertama berisi objek (prioritaskan yang mirip slide)
-  let fallbackArray = null
-  const stack = [raw]
-  while (stack.length) {
-    const cur = stack.pop()
-    if (Array.isArray(cur)) {
-      if (cur.length && typeof cur[0] === 'object') {
-        if (looksLikeSlide(cur[0])) return cur
-        fallbackArray = fallbackArray || cur
-      }
-      continue
-    }
-    if (cur && typeof cur === 'object') {
-      for (const k of Object.keys(cur)) stack.push(cur[k])
-    }
-  }
-  return Array.isArray(fallbackArray) ? fallbackArray : []
-}
-
+// Utility untuk ambil YouTube ID dari url/ID
 const extractId = (urlOrId) => {
   if (!urlOrId) return ''
-  let v = String(urlOrId).replace(/\u200B|\u200C|\u200D|\uFEFF/g, '').trim()
+  let v = String(urlOrId).trim()
+  // kalau sudah 11 karakter valid, langsung pakai
   if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v
   const rules = [
     /youtu\.be\/([A-Za-z0-9_-]{11})/,
@@ -173,120 +166,57 @@ const extractId = (urlOrId) => {
   return any ? any[1] : ''
 }
 
+// heroYtId otomatis dari current.youtube
+const heroYtId = computed(() => extractId(current.value.youtube))
+
+// Build URL embed
 const embedUrl = (id) => {
   const v = extractId(id)
   if (!v) return ''
   const qs = new URLSearchParams({
-    autoplay: '1', mute: '1', controls: '0', rel: '0',
-    modestbranding: '1', playsinline: '1', loop: '1', playlist: v,
+    autoplay: '1',
+    mute: '1',
+    controls: '0',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    loop: '1',
+    playlist: v,
   })
   return `https://www.youtube-nocookie.com/embed/${v}?${qs.toString()}`
 }
 
-function mapSlide(s) {
-  const ytRaw =
-    s.youtube_url ?? s.youtube ?? s.youtube_id ?? s.yt ?? s.yt_id ?? s.video_youtube ?? ''
-  const img =
-    s.image ?? s.image_url ?? s.cover ?? s.cover_url ?? s.poster ?? ''
-  const vid =
-    s.video ?? s.video_url ?? s.media ?? s.media_url ?? ''
-  return {
-    id:       s.id ?? crypto.randomUUID(),
-    title:    s.title ?? '',
-    subtitle: s.subtitle ?? s.sub_title ?? '',
-    image:    absUrl(img),
-    video:    absUrl(vid),
-    youtube:  ytRaw,
-    youtubeId: extractId(ytRaw),
-    _raw: s,
-  }
-}
-
-const current = computed(() => {
-  const all = (slides.value && slides.value.length) ? slides.value : (props.slides || [])
-  return all.find(s => s.youtubeId) || all[0] || {}
-})
-
+// ====== LOGIKA ACCORDION (HANYA UI) ======
 const accGroup = ref(null)
 let detach = () => {}
+
 async function bindAccordionToggles() {
   await nextTick()
   const root = accGroup.value
   if (!root) return
+
   const items = Array.from(root.querySelectorAll('details.toggle'))
   const onToggle = (ev) => {
     const t = ev.currentTarget
     if (!t.open) return
-    items.forEach((d) => { if (d !== t) d.open = false })
+    items.forEach((d) => {
+      if (d !== t) d.open = false
+    })
   }
   items.forEach((d) => d.addEventListener('toggle', onToggle))
-  detach = () => items.forEach((d) => d.removeEventListener('toggle', onToggle))
+  detach = () =>
+    items.forEach((d) => d.removeEventListener('toggle', onToggle))
 }
+
 watch(accordion, () => bindAccordionToggles())
 
 onMounted(async () => {
-  try {
-    // -------------------
-    // heroslide
-    // -------------------
-    const slidesRes = await api.get('heroslide/', { params: { page_size: 100 } })
-    console.log(
-      '[Hero] heroslide() status:', slidesRes.status,
-      'ctype:', slidesRes.headers?.['content-type'],
-      'typeof data:', typeof slidesRes.data,
-      'keys:', slidesRes.data && typeof slidesRes.data === 'object' ? Object.keys(slidesRes.data) : 'n/a'
-    )
-
-    const rows = parseRowsDeep(slidesRes.data)
-    if (!rows.length) {
-      console.warn(
-        '[Hero] heroslide(): masih kosong. Cuplikan payload:',
-        JSON.stringify(slidesRes.data, null, 2).slice(0, 400)
-      )
-    }
-    const mapped = rows.map(mapSlide)
-    slides.value = mapped
-
-    // pilih sumber heroYtId yang valid dulu
-    const firstWithYt = mapped.find(s => s.youtubeId)
-    const firstRaw    = rows[0] || {}
-    const firstRawYt  = extractId(
-      firstRaw.youtube_url ?? firstRaw.youtube ?? firstRaw.youtube_id ?? firstRaw.yt ?? firstRaw.yt_id ?? ''
-    )
-    heroYtId.value = firstWithYt?.youtubeId || firstRawYt || ''
-
-    // -------------------
-    // home
-    // -------------------
-    const homeRes = await api.get('home/')
-    console.log('[Hero] home() status:', homeRes.status, 'ctype:', homeRes.headers?.['content-type'], 'typeof data:', typeof homeRes.data)
-    let H = homeRes.data
-    if (typeof H === 'string') {
-      try { H = JSON.parse(H) } catch (e) {
-        console.warn('[Hero] home() string non-JSON. Cuplikan:', H.slice(0,180))
-        H = {}
-      }
-    }
-    heroTitle.value    = H?.site?.hero_title ?? H?.hero_title ?? H?.site_title ?? ''
-    heroSubtitle.value = H?.site?.hero_subtitle ?? H?.hero_subtitle ?? H?.subtitle ?? ''
-    accordion.value    = H?.accordion ?? H?.accordion_items ?? H?.faqs ?? []
-
-    // ringkas state di console agar mudah cek
-    console.log('[Hero] state =>', {
-      slidesCount: slides.value.length,
-      hasYt: !!heroYtId.value,
-      heroTitle: heroTitle.value,
-      accordionCount: accordion.value.length
-    })
-  } catch (e) {
-    console.warn('Failed to load hero data:', e)
-  }
+  // tidak ada API call, hanya setup accordion
   await bindAccordionToggles()
 })
 
 onBeforeUnmount(() => detach())
 </script>
-
 
 <style scoped>
 /* === General Style === */
@@ -346,54 +276,6 @@ onBeforeUnmount(() => detach())
   opacity:.95;
 }
 
-.about-cluster .badge{
-  position:absolute;
-  width: clamp(170px, 18vw, 260px);
-  aspect-ratio:1/1;
-  left: clamp(180px, 24vw, 300px);
-  top:  clamp(320px, 36vh, 420px);
-  transform: rotate(45deg);
-  border-radius: 26px;
-  background: #1e96ff;
-  box-shadow:
-    0 20px 48px rgba(0,0,0,.10),
-    inset 0 0 0 12px rgba(255,255,255,.16);
-  display:grid; place-items:center;
-}
-.about-cluster .badge-text{
-  transform: rotate(-45deg);
-  color:#fff; font-weight:800;
-  font-size: clamp(22px, 2.6vw, 34px);
-  line-height:1.05; letter-spacing:.2px;
-}
-
-.about-cluster .tile{
-  position:absolute;
-  width: clamp(110px, 12vw, 170px);
-  aspect-ratio:1/1;
-  transform: rotate(45deg);
-  border-radius: 22px;
-  background:#ffffff;
-  box-shadow: 0 16px 36px rgba(0,0,0,.08);
-  opacity:.96;
-}
-.about-cluster .tile.t1{
-  left: clamp(520px, 48vw, 640px);
-  top:  clamp(320px, 30vh, 380px);
-}
-.about-cluster .tile.t2{
-  left: calc(clamp(520px, 48vw, 640px) - 70px);
-  top:  calc(clamp(320px, 30vh, 380px) + 150px);
-  width: clamp(90px, 10vw, 140px);
-  opacity:.92;
-}
-.about-cluster .tile.t3{
-  left: calc(clamp(520px, 48vw, 640px) + 80px);
-  top:  calc(clamp(320px, 30vh, 380px) + 230px);
-  width: clamp(100px, 11vw, 150px);
-  opacity:.90;
-}
-
 .about-cluster .dotgrid{
   position:absolute;
   left: clamp(10px, 3vw, 40px);
@@ -429,7 +311,7 @@ onBeforeUnmount(() => detach())
   border-radius: var(--r-outer);
   background: linear-gradient(180deg, #1aa0ff 0%, #0e6bff 100%);
   box-shadow:
-    0 22px 46px rgba(29,161,242,.35),
+    0 20px 48px rgba(29,161,242,.35),
     0 0 0 10px rgba(29,161,242,.10);
 }
 .border::after{
@@ -441,24 +323,24 @@ onBeforeUnmount(() => detach())
 }
 
 .diamond{
-  position:absolute; inset: calc(var(--edge));
-  transform:rotate(45deg);
-  overflow:hidden; border-radius:40px; background:#000;
-}
-.border{ position:absolute; inset:0; transform:rotate(45deg); background:#1da1f2; border-radius:48px; }
-.diamond{
   position:absolute; inset: var(--edge);
   transform:rotate(45deg);
   overflow:hidden; border-radius:40px; background:#000;
 }
+
+/* 🔧 IFRAME DIAMOND */
 .diamond iframe.yt{
   position:absolute;
-  top:70%; left:70%;
-  width:100%; height:100%;
-  transform: translate(-50%, calc(-50% - 0.5%)) rotate(-45deg) scale(1.42);
+  top: 85%;
+  left: 80%;
+  width: 135%;
+  height: 135%;
+  transform: translate(-50%, -50%) rotate(-45deg);
   transform-origin: 50% 50%;
   display:block;
+  object-fit: cover;
 }
+
 iframe.yt{ pointer-events:auto; }
 
 .glow{ position:absolute; width:36%; height:36%; background: radial-gradient(60% 60% at 50% 50%, rgba(255,255,255,.95), rgba(255,255,255,0)); filter: blur(6px); opacity:.85; pointer-events:none; }
@@ -515,8 +397,6 @@ iframe.yt{ pointer-events:auto; }
 
   .about-cluster .soft.d1{ width: 26vw; }
   .about-cluster .soft.d2{ width: 48vw; }
-  .about-cluster .badge{ left: 28vw; top: 42vh; width: 26vw; }
-  .about-cluster .tile{ width: 18vw; }
   .about-cluster .dotgrid{ width: 60vw; height: 34vw; }
 }
 </style>
