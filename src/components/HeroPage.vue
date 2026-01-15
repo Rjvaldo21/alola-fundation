@@ -328,17 +328,15 @@ onBeforeUnmount(() => detach())
   overflow:hidden; border-radius:40px; background:#000;
 }
 
-/* 🔧 IFRAME DIAMOND */
 .diamond iframe.yt{
   position:absolute;
-  top: 85%;
-  left: 80%;
-  width: 135%;
-  height: 135%;
+  top: 75%;
+  left: 70%;
+  width: 150%;
+  height: 150%;
   transform: translate(-50%, -50%) rotate(-45deg);
   transform-origin: 50% 50%;
   display:block;
-  object-fit: cover;
 }
 
 iframe.yt{ pointer-events:auto; }
