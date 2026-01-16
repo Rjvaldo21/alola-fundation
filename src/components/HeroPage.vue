@@ -2,11 +2,10 @@
   <section class="hero">
     <!-- === CLUSTER DEKOR PERSIS MOCK === -->
     <div class="about-cluster">
-      <!-- soft squares pucat -->
       <span class="soft d1"></span>
+
       <span class="soft d2"></span>
 
-      <!-- dotted grid bawah kiri -->
       <span class="dotgrid"></span>
     </div>
 
@@ -16,7 +15,7 @@
     <div class="container hero-inner">
       <div class="copy">
         <h1 class="h1">
-          {{ heroTitle || current.title || 'Create Business Solution' }}
+          {{ heroTitle || current.title || 'Message from Our Founder & CEO' }}
         </h1>
         <p class="lead">
           {{
@@ -96,9 +95,9 @@ import {
 // ====== DUMMY DATA LOCAL (TANPA API) ======
 
 // Judul & subjudul static / dummy
-const heroTitle = ref('Create Business Solution')
+const heroTitle = ref('Message from Our Founder & CEO')
 const heroSubtitle = ref(
-  'We work with international startups, help entrepreneurs launch for the long term.'
+  'A reflection on Alola Foundation’s vision, mission, and long-term commitment to empowering women and strengthening communities in Timor-Leste.'
 )
 
 // Dummy slides (isi URL YouTube di sini saja)
