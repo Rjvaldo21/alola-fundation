@@ -33,7 +33,7 @@
             class="toggle card"
           >
             <summary class="chev">{{ it.title }}</summary>
-            <div class="panel prose" v-html="it.body_html || it.body || ''"></div>
+            <div class="panel prose" v-html="it.body_html || it.content_html || ''"></div>
           </details>
         </div>
       </div>
@@ -156,30 +156,30 @@
      FETCH ACCORDION API
   ================================ */
   async function loadAccordion() {
-    try {
-      const res = await axios.get(
-        'https://backend-alola.apps06.tic.gov.tl/api/accordion-items/'
-      )
-  
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data?.results || []
-  
-      if (data.length) {
-        accordion.value = data.map((it) => ({
-          id: it.id,
-          title: it.title,
-          body_html: it.body_html || it.body || '',
-        }))
-      }
-    } catch (err) {
-      console.warn(
-        '⚠️ Accordion API failed, using fallback dummy data',
-        err
-      )
-      accordion.value = [...dummyAccordion]
+  try {
+    const res = await axios.get(
+      'https://backend-alola.apps06.tic.gov.tl/api/accordion-items/'
+    )
+
+    const data = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.results)
+      ? res.data.results
+      : []
+
+    if (data.length) {
+      accordion.value = data.map((it) => ({
+        id: it.id,
+        title: it.title,
+        body_html: it.body_html || it.content_html || '',
+        content_html: it.content_html || it.body_html || '',
+      }))
     }
+  } catch (err) {
+    console.warn('⚠️ Accordion API failed, using fallback dummy data', err)
+    accordion.value = [...dummyAccordion]
   }
+}
   
   /* ===============================
      YOUTUBE UTILS (TIDAK DIUBAH)
