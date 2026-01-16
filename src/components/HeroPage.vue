@@ -83,139 +83,176 @@
 </template>
 
 <script setup>
-import {
-  ref,
-  computed,
-  onMounted,
-  onBeforeUnmount,
-  nextTick,
-  watch,
-} from 'vue'
-
-// ====== DUMMY DATA LOCAL (TANPA API) ======
-
-// Judul & subjudul static / dummy
-const heroTitle = ref('Message from Our Founder & CEO')
-const heroSubtitle = ref(
-  'A reflection on Alola Foundation’s vision, mission, and long-term commitment to empowering women and strengthening communities in Timor-Leste.'
-)
-
-// Dummy slides (isi URL YouTube di sini saja)
-const slides = ref([
-  {
-    id: 1,
-    title: 'Empowering Women & Children',
-    subtitle:
-      'Alola Foundation works to improve the lives of women and children in Timor-Leste.',
-    image: '', // bisa isi path gambar lokal di sini
-    video: '', // atau video lokal
-    youtube: 'https://youtu.be/csaObXq0Fhc?si=CsaCA8p4M6N08sLw',
-  },
-])
-
-// Dummy accordion / FAQ
-const accordion = ref([
-  {
-    id: 1,
-    title: 'MENSAGEM KIRSTY SWORD GUSMÃO...',
-    body_html: `
-      <p>Email: <a href="mailto:info@alola.tl">info@alola.tl</a></p>
-      <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-        Alola Foundation supports education, maternal and child health, 
-        economic empowerment and advocacy programs across Timor-Leste.
-      </p>
-    `,
-  },
-  {
-    id: 2,
-    title: 'A MESSAGE FROM CEO ALOLA',
-    body_html: `
-      <p>
-        Welcome to the Alola Foundation. Our mission is to improve the lives of 
-        women and children through education, advocacy and community programs.
-      </p>
-      <p>
-        Together we can build a stronger future for Timor-Leste.
-      </p>
-    `,
-  },
-])
-
-// Ambil slide current (untuk image/video/yt fallback)
-const current = computed(() => slides.value[0] || {})
-
-// Utility untuk ambil YouTube ID dari url/ID
-const extractId = (urlOrId) => {
-  if (!urlOrId) return ''
-  let v = String(urlOrId).trim()
-  // kalau sudah 11 karakter valid, langsung pakai
-  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v
-  const rules = [
-    /youtu\.be\/([A-Za-z0-9_-]{11})/,
-    /[?&]v=([A-Za-z0-9_-]{11})/,
-    /\/embed\/([A-Za-z0-9_-]{11})/,
-    /\/shorts\/([A-Za-z0-9_-]{11})/,
+  import {
+    ref,
+    computed,
+    onMounted,
+    onBeforeUnmount,
+    nextTick,
+    watch,
+  } from 'vue'
+  import axios from 'axios'
+  
+  /* ===============================
+     HERO STATIC / DUMMY (AMAN)
+  ================================ */
+  const heroTitle = ref('Message from Our Founder & CEO')
+  const heroSubtitle = ref(
+    'A reflection on Alola Foundation’s vision, mission, and long-term commitment to empowering women and strengthening communities in Timor-Leste.'
+  )
+  
+  // Slides (tetap dummy)
+  const slides = ref([
+    {
+      id: 1,
+      title: 'Empowering Women & Children',
+      subtitle:
+        'Alola Foundation works to improve the lives of women and children in Timor-Leste.',
+      image: '',
+      video: '',
+      youtube: 'https://youtu.be/csaObXq0Fhc?si=CsaCA8p4M6N08sLw',
+    },
+  ])
+  
+  const current = computed(() => slides.value[0] || {})
+  
+  /* ===============================
+     ACCORDION (API + FALLBACK)
+  ================================ */
+  
+  // Dummy fallback (JANGAN dihapus)
+  const dummyAccordion = [
+    {
+      id: 1,
+      title: 'MENSAGEM KIRSTY SWORD GUSMÃO...',
+      body_html: `
+        <p>Email: <a href="mailto:info@alola.tl">info@alola.tl</a></p>
+        <p>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+          Alola Foundation supports education, maternal and child health, 
+          economic empowerment and advocacy programs across Timor-Leste.
+        </p>
+      `,
+    },
+    {
+      id: 2,
+      title: 'A MESSAGE FROM CEO ALOLA',
+      body_html: `
+        <p>
+          Welcome to the Alola Foundation. Our mission is to improve the lives of 
+          women and children through education, advocacy and community programs.
+        </p>
+        <p>
+          Together we can build a stronger future for Timor-Leste.
+        </p>
+      `,
+    },
   ]
-  for (const r of rules) {
-    const m = v.match(r)
-    if (m && m[1]) return m[1]
+  
+  // State accordion (dipakai template)
+  const accordion = ref([...dummyAccordion])
+  
+  /* ===============================
+     FETCH ACCORDION API
+  ================================ */
+  async function loadAccordion() {
+    try {
+      const res = await axios.get(
+        'https://backend-alola.apps06.tic.gov.tl/api/accordion-items/'
+      )
+  
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.results || []
+  
+      if (data.length) {
+        accordion.value = data.map((it) => ({
+          id: it.id,
+          title: it.title,
+          body_html: it.body_html || it.body || '',
+        }))
+      }
+    } catch (err) {
+      console.warn(
+        '⚠️ Accordion API failed, using fallback dummy data',
+        err
+      )
+      accordion.value = [...dummyAccordion]
+    }
   }
-  const any = v.match(/([A-Za-z0-9_-]{11})/)
-  return any ? any[1] : ''
-}
-
-// heroYtId otomatis dari current.youtube
-const heroYtId = computed(() => extractId(current.value.youtube))
-
-// Build URL embed
-const embedUrl = (id) => {
-  const v = extractId(id)
-  if (!v) return ''
-  const qs = new URLSearchParams({
-    autoplay: '1',
-    mute: '1',
-    controls: '0',
-    rel: '0',
-    modestbranding: '1',
-    playsinline: '1',
-    loop: '1',
-    playlist: v,
-  })
-  return `https://www.youtube-nocookie.com/embed/${v}?${qs.toString()}`
-}
-
-// ====== LOGIKA ACCORDION (HANYA UI) ======
-const accGroup = ref(null)
-let detach = () => {}
-
-async function bindAccordionToggles() {
-  await nextTick()
-  const root = accGroup.value
-  if (!root) return
-
-  const items = Array.from(root.querySelectorAll('details.toggle'))
-  const onToggle = (ev) => {
-    const t = ev.currentTarget
-    if (!t.open) return
-    items.forEach((d) => {
-      if (d !== t) d.open = false
+  
+  /* ===============================
+     YOUTUBE UTILS (TIDAK DIUBAH)
+  ================================ */
+  const extractId = (urlOrId) => {
+    if (!urlOrId) return ''
+    let v = String(urlOrId).trim()
+    if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v
+    const rules = [
+      /youtu\.be\/([A-Za-z0-9_-]{11})/,
+      /[?&]v=([A-Za-z0-9_-]{11})/,
+      /\/embed\/([A-Za-z0-9_-]{11})/,
+      /\/shorts\/([A-Za-z0-9_-]{11})/,
+    ]
+    for (const r of rules) {
+      const m = v.match(r)
+      if (m && m[1]) return m[1]
+    }
+    const any = v.match(/([A-Za-z0-9_-]{11})/)
+    return any ? any[1] : ''
+  }
+  
+  const heroYtId = computed(() => extractId(current.value.youtube))
+  
+  const embedUrl = (id) => {
+    const v = extractId(id)
+    if (!v) return ''
+    const qs = new URLSearchParams({
+      autoplay: '1',
+      mute: '1',
+      controls: '0',
+      rel: '0',
+      modestbranding: '1',
+      playsinline: '1',
+      loop: '1',
+      playlist: v,
     })
+    return `https://www.youtube-nocookie.com/embed/${v}?${qs.toString()}`
   }
-  items.forEach((d) => d.addEventListener('toggle', onToggle))
-  detach = () =>
-    items.forEach((d) => d.removeEventListener('toggle', onToggle))
-}
-
-watch(accordion, () => bindAccordionToggles())
-
-onMounted(async () => {
-  // tidak ada API call, hanya setup accordion
-  await bindAccordionToggles()
-})
-
-onBeforeUnmount(() => detach())
-</script>
+  
+  /* ===============================
+    ACCORDION UI TOGGLE
+  ================================ */
+  const accGroup = ref(null)
+  let detach = () => {}
+  
+  async function bindAccordionToggles() {
+    await nextTick()
+    const root = accGroup.value
+    if (!root) return
+  
+    const items = Array.from(root.querySelectorAll('details.toggle'))
+    const onToggle = (ev) => {
+      const t = ev.currentTarget
+      if (!t.open) return
+      items.forEach((d) => {
+        if (d !== t) d.open = false
+      })
+    }
+    items.forEach((d) => d.addEventListener('toggle', onToggle))
+    detach = () =>
+      items.forEach((d) => d.removeEventListener('toggle', onToggle))
+  }
+  
+  watch(accordion, () => bindAccordionToggles())
+  
+  onMounted(async () => {
+    await loadAccordion()
+    await bindAccordionToggles()
+  })
+  
+  onBeforeUnmount(() => detach())
+</script>  
 
 <style scoped>
 /* === General Style === */
