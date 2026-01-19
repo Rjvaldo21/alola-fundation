@@ -52,11 +52,11 @@
           <article v-for="item in gifts" :key="item.id" class="gift-card">
             <!-- media -->
             <div class="card-media">
-              <div class="media-grid">
+              <div class="media-grid" :class="{ 'no-badge': hasApiData }">
                 <div class="photo">
                   <img :src="item.photoUrl" :alt="item.title" loading="lazy" decoding="async" />
                 </div>
-                <div class="badge">
+                <div class="badge" v-if="!hasApiData">
                   <div class="badge-inner">
                     <div class="badge-top">A GIFT</div>
                     <div class="badge-bottom">FOR GOOD</div>
@@ -91,7 +91,7 @@
     </section>
   </template>
   
-  <script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, absUrl } from '@/api'   // ⬅️ pakai helper API kita
@@ -101,6 +101,7 @@ const props = defineProps({
   apiUrl: { type: String, default: 'gifts/' }
 })
 
+const hasApiData = ref(false)
 const router = useRouter()
 const gifts = ref([])
 const isLoading = ref(true)
@@ -144,16 +145,24 @@ onMounted(async () => {
   try {
     const { data } = await api.get(props.apiUrl)
     const rows = Array.isArray(data) ? data : (data?.results || [])
-    gifts.value = (rows || []).map(mapGift)
-    if (!gifts.value.length) gifts.value = fallback
+
+    if (rows.length) {
+      gifts.value = rows.map(mapGift)
+      hasApiData.value = true       
+    } else {
+      gifts.value = fallback
+      hasApiData.value = false
+    }
   } catch (err) {
     console.warn('Failed to load gifts:', err)
     errorMsg.value = 'Unable to load gift data at this time. Showing examples.'
     gifts.value = fallback
+    hasApiData.value = false
   } finally {
     isLoading.value = false
   }
 })
+
 
 function formatMoney(v) {
   try { return new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',minimumFractionDigits:0}).format(v) }
@@ -227,6 +236,10 @@ function buyNow(item) {
   .photo{ position: relative; }
   .photo::before{ content:""; display:block; padding-bottom: 66%; }
   .photo > img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+  .media-grid.no-badge{
+    grid-template-columns: 1fr;
+  }
   
   /* badge */
   .badge{
