@@ -11,7 +11,13 @@
         <section class="hero">
           <div v-if="isLoading" class="skeleton hero-ph"></div>
           <figure v-else class="hero-figure">
-            <img :src="hero.imageUrl" :alt="hero.alt || hero.title" loading="lazy" decoding="async" />
+            <img
+              :src="hero.imageUrl"
+              :alt="hero.alt || hero.title"
+              loading="lazy"
+              decoding="async"
+              @error="onHeroError"
+            />
             <figcaption v-if="hero.caption" class="caption" v-html="hero.caption"></figcaption>
           </figure>
   
@@ -50,92 +56,126 @@
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue'
-  import { api, absUrl } from '@/api'
-  
-  const props = defineProps({
-    pageSlug: { type: String, default: 'radio-program' },
-  })
-  
-  const isLoading  = ref(true)
-  const error      = ref('')
-  
-  /* ==== HERO (dengan fallback aman) ==== */
-  const HERO_FALLBACK =
-    'https://images.unsplash.com/photo-1532635241-17e820acc59f?q=80&w=1630&auto=format&fit=crop'
-  
-  const hero = ref({
-    title: 'Radio Program',
-    imageUrl: HERO_FALLBACK,
-    caption: '',
-    alt: 'Radio talkshow in studio'
-  })
-  
-  /* ==== GALERI DEFAULT (tampil duluan) ==== */
-  const defaultGallery = [
-    { url: 'https://images.unsplash.com/photo-1517732306149-e8f829eb588a?q=80&w=2072&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=2070&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?q=80&w=900&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1484353371297-d8cfd2895020?q=80&w=1779&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1495837174058-628aafc7d610?q=80&w=2070&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=900&auto=format&fit=crop' },
-    { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=900&auto=format&fit=crop' }
-  ]
-  
-  /* ⬅️ PENTING: set nilai awal galeri = default  */
-  const gallery    = ref([...defaultGallery])
-  const leftDesc   = ref('')
-  const rightDesc  = ref('')
-  const galleryCta = ref({ text: '', href: '' }) // kosongkan tombol dulu
-  
-  onMounted(async () => {
-    isLoading.value = true
-    try {
-      // 1) Ambil Page radio-program
-      const { data: page } = await api.get(`pages/${props.pageSlug}/`)
-  
-      hero.value = {
-        title: page?.title || hero.value.title,
-        imageUrl: page?.cover_image ? absUrl(page.cover_image) : HERO_FALLBACK,
-        caption: page?.meta_description || '',
-        alt: page?.title || 'Radio Program',
+    import { ref, onMounted } from 'vue'
+    import { api, absUrl } from '@/api'
+    
+    const props = defineProps({
+      pageSlug: { type: String, default: 'radio-program' },
+    })
+    
+    const isLoading = ref(true)
+    const error = ref('')
+    
+    /* ==== HERO (dengan fallback aman) ==== */
+    const HERO_FALLBACK =
+      'https://images.unsplash.com/photo-1532635241-17e820acc59f?q=80&w=1630&auto=format&fit=crop'
+    
+    const hero = ref({
+      title: 'Radio Program',
+      imageUrl: HERO_FALLBACK,
+      caption: '',
+      alt: 'Radio talkshow in studio'
+    })
+    
+    /* ==== GALERI DEFAULT ==== */
+    const defaultGallery = [
+      { url: 'https://images.unsplash.com/photo-1517732306149-e8f829eb588a?q=80&w=2072&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=2070&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?q=80&w=900&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1484353371297-d8cfd2895020?q=80&w=1779&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1495837174058-628aafc7d610?q=80&w=2070&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=900&auto=format&fit=crop' },
+      { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=900&auto=format&fit=crop' }
+    ]
+    
+    const gallery = ref([...defaultGallery])
+    const leftDesc = ref('')
+    const rightDesc = ref('')
+    
+    /** Tambahan: simpan data episode (kalau nanti mau bikin player/list) */
+    const episodes = ref([])
+    
+    const galleryCta = ref({ text: '', href: '' }) // kosongkan tombol dulu
+    
+    onMounted(async () => {
+      isLoading.value = true
+      try {
+        // 1) Ambil Page radio-program
+        const { data: page } = await api.get(`pages/${props.pageSlug}/`)
+    
+        const body = page?.body_html || ''
+        leftDesc.value = /<\w+/.test(body) ? body : (body ? `<p>${body}</p>` : '')
+    
+        // set hero dari page dulu (kalau ada)
+        hero.value = {
+          title: page?.title || hero.value.title,
+          imageUrl: page?.cover_image ? absUrl(page.cover_image) : HERO_FALLBACK,
+          caption: page?.meta_description || '',
+          alt: page?.title || 'Radio Program',
+        }
+    
+        // 2) Ambil Radio Episodes
+        const { data: epRes } = await api.get('radio/episodes/')
+        const list = Array.isArray(epRes?.results) ? epRes.results : []
+        episodes.value = list
+    
+        // ambil max 8 yang punya image
+        const imgItems = list
+          .filter(e => !!e?.image)
+          .slice(0, 8)
+          .map(e => ({
+            url: absUrl(e.image),
+            alt: e.title || 'Radio episode'
+          }))
+    
+        // override gallery kalau ada images
+        if (imgItems.length) {
+          gallery.value = imgItems
+          galleryCta.value = { text: 'More episodes', href: '/radio' } // sesuaikan route kamu
+        }
+    
+        // Optional: kalau cover_image page kosong, pakai image episode terbaru sebagai hero
+        if (!page?.cover_image && list.length && list[0]?.image) {
+          hero.value.imageUrl = absUrl(list[0].image)
+          hero.value.alt = list[0].title || hero.value.alt
+        }
+    
+        // Optional: isi rightDesc pakai episode terbaru (ringkas)
+        const latest = list?.[0]
+        if (latest?.description) {
+          const short = String(latest.description).slice(0, 280)
+          rightDesc.value = `
+            <p><b>Latest episode:</b> ${latest.title || ''}</p>
+            <p>${short}${latest.description.length > 280 ? '…' : ''}</p>
+          `
+        } else {
+          rightDesc.value = ''
+        }
+    
+      } catch (e) {
+        console.warn('[RadioProgram] fetch error:', e)
+        error.value = 'Gagal memuat konten Radio Program.'
+        // fallback tetap aman: hero & gallery pakai default
+      } finally {
+        isLoading.value = false
       }
-  
-      const body = page?.body_html || ''
-      leftDesc.value = /<\w+/.test(body) ? body : (body ? `<p>${body}</p>` : '')
-  
-      // 2) (Optional) Kalau nanti kamu punya endpoint album, override di sini.
-      //    Kalau gagal / kosong, BIARKAN nilai default tetap dipakai.
-      // try {
-      //   const { data: album } = await api.get('gallery/albums/radio-program/')
-      //   const items = album?.items || []
-      //   if (Array.isArray(items) && items.length) {
-      //     gallery.value = items
-      //       .filter(it => (String(it.type||'').toUpperCase() === 'IMAGE') && (it.image || it.url))
-      //       .map(it => ({ url: absUrl(it.image || it.url), alt: it.caption || it.title || '' }))
-      //     galleryCta.value = { text: 'More photos', href: '/gallery/radio-program' }
-      //   }
-      // } catch { /* abaikan, keep default */ }
-  
-    } catch (e) {
-      console.warn('[RadioProgram] fetch error:', e)
-      error.value = 'Gagal memuat konten Radio Program.'
-      // Biarkan hero & gallery tetap pakai fallback
-    } finally {
-      isLoading.value = false
+    })
+    
+    /* fallback jika cover image 404 */
+    function onHeroError() {
+      hero.value.imageUrl = HERO_FALLBACK
     }
-  })
-  
-  /* Fallback jika cover image 404 di runtime (butuh 1 baris di template) */
-  function onHeroError() {
-    hero.value.imageUrl = HERO_FALLBACK
-  }
-  
-  function openGallery(){ /* belum dipakai */ }
-  function preview(url){ window.open(url, '_blank', 'noopener') }
-  </script>
-  
+    
+    function openGallery() {
+      if (galleryCta.value?.href) window.location.href = galleryCta.value.href
+    }
+    
+    function preview(url) {
+      window.open(url, '_blank', 'noopener')
+    }
+    </script>
+
 
 <style scoped>
   :root{
