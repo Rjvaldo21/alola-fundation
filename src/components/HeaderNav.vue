@@ -206,10 +206,26 @@ const menus = [
   ],
 },
 
-  { label: 'Publication', to: '/publication', name: 'publication', children: [
+{ 
+  label: 'Publication', 
+  to: '/publication', 
+  name: 'publication', 
+  children: [
     { label: 'Radio Program', to: '/publication/radio-program' },
-    { label: 'Social Media', to: '/publication#social-media' },
-  ]},
+
+    // ✅ Social Media + submenu
+    { 
+      label: 'Social Media', 
+      to: '/publication#social-media',
+      children: [
+        { label: 'SERBISU HAMUTUK HODI MANAN LUTA BA TIMOR-LESTE SAUDÁVEL LIU-TAN', to: '/publication#servisu-hamutuk' },
+        { label: 'EVENTU : “Tinan Internasional ba Lian Indíjenas”', to: '/publication#eventu' },
+        { label: 'HHALIKU FUNDRAISING NIGHT 2025', to: '/publication#haliku' },
+      ]
+    },
+  ]
+},
+
   { label: 'Get Involved', to: '/get-involved', name: 'get-involved', children: [
     { label: 'Gift Certificates', to: '/gift-certificates' },
     { label: 'Make A Donation', to: '/donate' },
