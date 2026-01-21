@@ -204,40 +204,50 @@
    *  FETCH SUPPORTERS (Spotlight)
    *  sesuai API: /api/supporters/ -> {results:[{name,logo,link_url,order}]}
    * =============================== */
-  async function fetchSupporter() {
-    try {
-      const url = new URL(SUPPORTERS_URL)
-      // optional: ambil yang paling atas berdasarkan order
-      url.searchParams.set('ordering', 'order')
-  
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  
-      const data = await res.json()
-      const rows = asList(data)
-  
-      if (!rows.length) return
-  
-      const top = rows[0]
-      // overwrite hanya field yang memang ada di API
-      member.value = {
-        ...member.value,
-        name: top.name || member.value.name,
-        photo: top.logo ? absUrl(top.logo) : member.value.photo,
-        socials: {
-          ...member.value.socials,
-          // kalau backend nanti punya link_url, kita taruh ke salah satu social biar tetap ada target
-          facebook: top.link_url || member.value.socials.facebook,
-        },
-      }
-    } catch (e) {
-      console.warn('[HomePage] Failed to fetch supporters:', e)
-      // fallback tetap dummy (jangan ubah apa-apa)
+   async function fetchSupporter() {
+  try {
+    const url = new URL(SUPPORTERS_URL)
+    // optional: ambil yang paling atas berdasarkan order
+    url.searchParams.set('ordering', 'order')
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const data = await res.json()
+    const rows = asList(data)
+
+    if (!rows.length) return
+
+    const top = rows[0]
+
+    // ✅ TAMBAHAN BARU: ambil bio_html jadi array paragraf (text saja)
+    const bioText = (top.bio_html || '').trim()
+    const bioParts = bioText
+      ? bioText.split(/\r?\n\r?\n+/).map(s => s.trim()).filter(Boolean)
+      : []
+
+    // overwrite hanya field yang memang ada di API
+    member.value = {
+      ...member.value,
+      name: top.name || member.value.name,
+      photo: top.logo ? absUrl(top.logo) : member.value.photo,
+
+      // ✅ TAMBAHAN BARU: isi bio dari API kalau ada
+      bio: bioParts.length ? bioParts : member.value.bio,
+
+      socials: {
+        ...member.value.socials,
+        facebook: top.link_url || member.value.socials.facebook,
+      },
     }
+  } catch (e) {
+    console.warn('[HomePage] Failed to fetch supporters:', e)
+    // fallback tetap dummy (jangan ubah apa-apa)
   }
+}
   
   onMounted(() => {
     fetchLatestNews()
@@ -268,4 +278,26 @@
 .more:hover {
   text-decoration: underline;
 }
+
+/* bikin kolom foto lebih besar */
+.spotlight-grid {
+  grid-template-columns: 520px 1fr; /* sebelumnya mungkin 360px 1fr */
+}
+
+/* bikin foto lebih besar & tinggi */
+.spotlight-photo {
+  width: 520px;
+  height: 520px;      /* kalau mau lebih panjang: 600px */
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* gambar memenuhi box */
+.spotlight-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* penting biar tidak ketarik */
+  display: block;
+}
+
 </style>
