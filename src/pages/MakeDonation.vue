@@ -14,7 +14,7 @@
 
     <!-- METHODS -->
     <main class="md-container md-main">
-      <!-- GRID METHOD, TANPA LOADING/API -->
+      <!-- GRID METHOD -->
       <div class="method-grid">
         <!-- PayPal / Card -->
         <article class="method-card" v-if="isEnabled('paypal')">
@@ -117,11 +117,7 @@
             <div class="bank-line" v-if="bank.swift_bic">
               {{ bank.swift_bic_label }}:
               <span class="mono">{{ bank.swift_bic }}</span>
-              <button
-                class="copy"
-                @click="copy(bank.swift_bic)"
-                title="Copy"
-              >
+              <button class="copy" @click="copy(bank.swift_bic)" title="Copy">
                 Copy
               </button>
             </div>
@@ -143,18 +139,14 @@
             </a>
           </div>
 
-          <!-- Fallback tampilkan details mentah bila tidak terparse -->
+          <!-- fallback details kalau tidak terparse -->
           <p
             class="card-text"
             v-if="byId('bank').details && !bank.bsb && !bank.account_number"
             v-html="byId('bank').details"
           ></p>
 
-          <p
-            class="card-text small"
-            v-if="bank.receipt_note"
-            v-html="bank.receipt_note"
-          ></p>
+          <p class="card-text small" v-if="bank.receipt_note" v-html="bank.receipt_note"></p>
           <div v-if="bank.email" class="card-text small">
             Email:
             <a :href="`mailto:${bank.email}`">{{ bank.email }}</a>
@@ -241,121 +233,211 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-
-// ===== INTRO TEXT DUMMY =====
-const introTop = ref(
-  'So that we are better able to support our Alola friends and partners in Timor-Leste, we have deductible-gift recipient (DGR) status, which means any donation above $2 is tax-deductible.'
-)
-const introMid = ref(
-  'If you would like to contribute to the ongoing sustainability of Fundasaun Alola, you can become a Regular Giver. You can sign up to make a monthly donation via PayPal or GiveNow or set up through your bank. Regular donations provide reliable funds for Fundasaun Alola, helping the team plan and deliver their programs.'
-)
-const introBottom = ref('')
-
-// ===== METHODS DUMMY =====
-const methods = ref([
-  {
-    id: 'paypal',
-    title: 'By Credit/Debit Card via PayPal',
-    summary:
-      'Make a one-off donation or set up a regular donation using your credit or debit card via PayPal. You do not need a PayPal account—choose “Donate by Debit or Credit card”.',
-    cta_text: 'Donate',
-    cta_url: 'https://www.paypal.com/', // dummy
-    logo: '', // isi kalau punya logo PayPal
-  },
-  {
-    id: 'qris',
-    title: 'By QRIS',
-    summary:
-      'Scan the QRIS code below using your mobile banking app to complete your donation.',
-    qr_image:
-      'https://via.placeholder.com/300x300.png?text=QRIS+Dummy', // dummy QR
-    cta_url: '',
-  },
-  {
-    id: 'bank',
-    title: 'By Direct Deposit',
-    summary: 'Alola Australia Ltd. bank account',
-    details: '',
-  },
-  {
-    id: 'givenow',
-    title: 'By GiveNow',
-    summary:
-      'GiveNow is an online giving platform. Make a once-off donation, set up a regular donation or create a peer-to-peer fundraising event for Alola Australia through a CrowdRaiser.',
-    cta_text: 'GiveNow',
-    cta_url: 'https://www.givenow.com.au/', // dummy
-  },
-  {
-    id: 'cheque',
-    title: 'By Cheque',
-    summary:
-      'From 28 March 2024 Bank Australia are no longer accepting cheques or money orders.',
-  },
-])
-
-// Semua method di-enable saat dummy
-const enabledIds = ref(new Set(['paypal', 'qris', 'bank', 'givenow', 'cheque']))
-const isEnabled = (id) =>
-  enabledIds.value.size ? enabledIds.value.has(id) : true
-
-const byId = (id) => methods.value.find((m) => m.id === id) || {}
-
-// ===== BANK DUMMY =====
-const bank = ref({
-  bank_name: 'Bank Australia',
-  bsb: '313140',
-  account_number: '12184403',
-  swift_bic: '',
-  reference_hint: '(your surname)',
-  receipt_note:
-    'It is a requirement that we issue a receipt for all donations. Please email us if you have made a direct deposit and would like a receipt.',
-  email: 'info@alola.org',
-  qr_image: '',
-  bsb_label: 'BSB',
-  account_label: 'Account',
-  reference_label: 'Reference',
-  swift_bic_label: 'SWIFT/BIC',
-})
-
-// ===== IMPACT LEVELS DUMMY =====
-const levels = ref([100, 250, 500, 1000, 2000])
-
-// PayPal icon
-const paypalLogoUrl = computed(() => {
-  const m = byId('paypal')
-  return m.logo || ''
-})
-const paypalIconClass = computed(() =>
-  paypalLogoUrl.value ? 'pp' : 'cc'
-)
-
-function formatMoney(v) {
-  try {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD',
-      minimumFractionDigits: 0,
-    }).format(v)
-  } catch {
-    return `AU$${v}`
+  import { ref, computed, onMounted } from 'vue'
+  import { api, absUrl } from '@/api'
+  
+  // ===== INTRO TEXT (default/fallback) =====
+  const introTop = ref(
+    'So that we are better able to support our Alola friends and partners in Timor-Leste, we have deductible-gift recipient (DGR) status, which means any donation above $2 is tax-deductible.'
+  )
+  const introMid = ref(
+    'If you would like to contribute to the ongoing sustainability of Fundasaun Alola, you can become a Regular Giver. You can sign up to make a monthly donation via PayPal or GiveNow or set up through your bank. Regular donations provide reliable funds for Fundasaun Alola, helping the team plan and deliver their programs.'
+  )
+  const introBottom = ref('')
+  
+  // ===== METHODS (default/fallback) =====
+  const methods = ref([
+    {
+      id: 'paypal',
+      title: 'By Credit/Debit Card via PayPal',
+      summary:
+        'Make a one-off donation or set up a regular donation using your credit or debit card via PayPal. You do not need a PayPal account—choose “Donate by Debit or Credit card”.',
+      cta_text: 'Donate',
+      cta_url: 'https://www.paypal.com/',
+      logo: '',
+    },
+    {
+      id: 'qris',
+      title: 'By QRIS',
+      summary:
+        'Scan the QRIS code below using your mobile banking app to complete your donation.',
+      qr_image: 'https://via.placeholder.com/300x300.png?text=QRIS+Dummy',
+      cta_url: '',
+    },
+    {
+      id: 'bank',
+      title: 'By Direct Deposit',
+      summary: 'Alola Australia Ltd. bank account',
+      details: '',
+    },
+    {
+      id: 'givenow',
+      title: 'By GiveNow',
+      summary:
+        'GiveNow is an online giving platform. Make a once-off donation, set up a regular donation or create a peer-to-peer fundraising event for Alola Australia through a CrowdRaiser.',
+      cta_text: 'GiveNow',
+      cta_url: 'https://www.givenow.com.au/',
+    },
+    {
+      id: 'cheque',
+      title: 'By Cheque',
+      summary:
+        'From 28 March 2024 Bank Australia are no longer accepting cheques or money orders.',
+    },
+  ])
+  
+  // enable semua saat fallback
+  const enabledIds = ref(new Set(['paypal', 'qris', 'bank', 'givenow', 'cheque']))
+  const isEnabled = (id) => (enabledIds.value.size ? enabledIds.value.has(id) : true)
+  const byId = (id) => methods.value.find((m) => m.id === id) || {}
+  
+  // ===== BANK (default/fallback) =====
+  const bank = ref({
+    bank_name: 'Bank Australia',
+    bsb: '',
+    account_number: '12184403',
+    swift_bic: '',
+    reference_hint: '',
+    receipt_note: '',
+    email: '',
+    qr_image: '',
+    bsb_label: 'BSB',
+    account_label: 'Account',
+    reference_label: 'Reference',
+    swift_bic_label: 'SWIFT/BIC',
+  })
+  
+  // ===== IMPACT LEVELS (default/fallback) =====
+  const levels = ref([100, 250, 500, 1000, 2000])
+  
+  // ===== Helpers =====
+  const paypalLogoUrl = computed(() => (byId('paypal').logo ? byId('paypal').logo : ''))
+  const paypalIconClass = computed(() => (paypalLogoUrl.value ? 'pp' : 'cc'))
+  
+  function formatMoney(v) {
+    try {
+      return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
+        minimumFractionDigits: 0,
+      }).format(v)
+    } catch {
+      return `AU$${v}`
+    }
   }
-}
-function barStyle(v) {
-  const min = Math.min(...levels.value)
-  const max = Math.max(...levels.value)
-  const h = max === min ? 60 : 30 + ((v - min) / (max - min)) * 65
-  return { '--h': `${h}%` }
-}
-async function copy(text) {
-  try {
-    await navigator.clipboard.writeText(String(text))
-    alert('Copied: ' + text)
-  } catch {
-    alert('Copy failed')
+  
+  function barStyle(v) {
+    const min = Math.min(...levels.value)
+    const max = Math.max(...levels.value)
+    const h = max === min ? 60 : 30 + ((v - min) / (max - min)) * 65
+    return { '--h': `${h}%` }
   }
-}
-</script>
+  
+  async function copy(text) {
+    try {
+      await navigator.clipboard.writeText(String(text))
+      alert('Copied: ' + text)
+    } catch {
+      alert('Copy failed')
+    }
+  }
+  
+  // ===== Fetch helpers =====
+  function getRows(payload) {
+    return Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.results)
+      ? payload.results
+      : []
+  }
+  
+  function pick(obj, keys, fallback = '') {
+    for (const k of keys) {
+      const v = obj?.[k]
+      if (v !== undefined && v !== null && String(v).trim() !== '') return v
+    }
+    return fallback
+  }
+  
+  // ✅ NEW: normalize from API field "method" (BANK/QRIS/etc)
+  function normalizeMethod(method) {
+    const v = String(method || '').toLowerCase().trim()
+    if (v === 'bank') return 'bank'
+    if (v === 'paypal') return 'paypal'
+    if (v === 'qris') return 'qris'
+    if (v === 'givenow') return 'givenow'
+    if (v === 'cheque' || v === 'check') return 'cheque'
+    return v
+  }
+  
+  onMounted(async () => {
+    // 1) donation config (intro + levels) — optional
+    try {
+      const { data } = await api.get('donations/config/')
+      introTop.value = pick(data, ['intro_top', 'introTop', 'top', 'intro'], introTop.value)
+      introMid.value = pick(data, ['intro_mid', 'introMid', 'mid'], introMid.value)
+      introBottom.value = pick(data, ['intro_bottom', 'introBottom', 'bottom'], introBottom.value)
+  
+      const apiLevels = data?.levels || data?.impact_levels || data?.amount_levels
+      if (Array.isArray(apiLevels) && apiLevels.length) {
+        levels.value = apiLevels.map((x) => Number(x)).filter((x) => !Number.isNaN(x))
+      }
+    } catch (e) {
+      console.warn('donations/config fetch failed, using fallback', e)
+    }
+  
+    // 2) donation options — FIX sesuai API kamu
+    try {
+      const { data } = await api.get('donations/options/')
+      const rows = getRows(data)
+  
+      if (rows.length) {
+        // map API → methods yang dipakai template
+        methods.value = rows.map((r, i) => {
+          const id = normalizeMethod(r.method)
+          const qr = r.image_qr ? absUrl(r.image_qr) : ''
+          return {
+            id,
+            title:
+              id === 'bank'
+                ? 'By Direct Deposit'
+                : (r.title || r.method || ''),
+            // API kamu pakai details untuk nama bank (contoh: BNU)
+            summary: r.details || '',
+            details: r.details || '',
+            cta_text: '',
+            cta_url: '',
+            qr_image: qr,
+            logo: '',
+            _raw: r,
+          }
+        })
+  
+        // enable yang ada dari API
+        enabledIds.value = new Set(methods.value.map((m) => m.id))
+  
+        // parse khusus bank dari API
+        const bankRow = rows.find((r) => normalizeMethod(r.method) === 'bank')
+        if (bankRow) {
+          bank.value = {
+            ...bank.value,
+            bank_name: bankRow.details || bank.value.bank_name,      // "BNU"
+            account_number: bankRow.instruction || bank.value.account_number, // "7326283282"
+            qr_image: bankRow.image_qr ? absUrl(bankRow.image_qr) : '',
+            // API kamu belum punya bsb/swift/ref/email — tetap kosong
+            bsb: '',
+            swift_bic: '',
+            reference_hint: '',
+            receipt_note: '',
+            email: '',
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('donations/options fetch failed, using fallback', e)
+    }
+  })
+  </script>  
 
 <style scoped>
 :root {
@@ -370,9 +452,7 @@ async function copy(text) {
   --shadow: 0 8px 24px rgba(2, 24, 43, 0.06);
   --radius: 14px;
 }
-.md-wrap {
-  background: #ffffff;
-}
+.md-wrap { background: #ffffff; }
 .md-container {
   width: min(1120px, 100%);
   margin-inline: auto;
@@ -383,11 +463,7 @@ async function copy(text) {
 .md-hero {
   padding-block: clamp(16px, 2vw, 26px);
   background:
-    radial-gradient(
-        1200px 400px at 10% -50%,
-        rgba(14, 165, 164, 0.18),
-        transparent 60%
-      ),
+    radial-gradient(1200px 400px at 10% -50%, rgba(14, 165, 164, 0.18), transparent 60%),
     linear-gradient(180deg, #ffffff, #f5fdfa);
   border-bottom: 1px solid var(--line);
 }
@@ -411,30 +487,17 @@ async function copy(text) {
   font-size: clamp(14px, 1.5vw, 15px);
   margin: 10px 0;
 }
-.md-hero-panel em {
-  font-style: italic;
-  color: #111;
-}
+.md-hero-panel em { font-style: italic; color: #111; }
 
 /* METHODS GRID */
-.md-main {
-  padding-block: clamp(16px, 3vw, 26px);
-}
+.md-main { padding-block: clamp(16px, 3vw, 26px); }
 .method-grid {
   display: grid;
   gap: clamp(12px, 2vw, 18px);
   grid-template-columns: repeat(4, minmax(230px, 1fr));
 }
-@media (max-width: 1024px) {
-  .method-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 620px) {
-  .method-grid {
-    grid-template-columns: 1fr;
-  }
-}
+@media (max-width: 1024px) { .method-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .method-grid { grid-template-columns: 1fr; } }
 
 .method-card {
   border-radius: var(--radius);
@@ -447,10 +510,7 @@ async function copy(text) {
   gap: 10px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.method-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(2, 24, 43, 0.1);
-}
+.method-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(2, 24, 43, 0.1); }
 
 .icon {
   width: 40px;
@@ -461,53 +521,18 @@ async function copy(text) {
   justify-content: center;
   color: #fff;
 }
-.icon svg {
-  width: 22px;
-  height: 22px;
-}
-/* warna ikon */
-.icon.cc {
-  background: #2563eb;
-}
-.icon.pp {
-  background: #2563eb;
-}
-.icon.bank {
-  background: #059669;
-}
-.icon.give {
-  background: #f59e0b;
-}
-.icon.cheque {
-  background: #6b7280;
-}
-.icon.qris {
-  background: #0ea5a4;
-}
+.icon svg { width: 22px; height: 22px; }
+.icon.cc { background: #2563eb; }
+.icon.pp { background: #2563eb; }
+.icon.bank { background: #059669; }
+.icon.give { background: #f59e0b; }
+.icon.cheque { background: #6b7280; }
+.icon.qris { background: #0ea5a4; }
+.icon img { width: 22px; height: 22px; display: block; object-fit: contain; }
 
-/* jika pakai logo gambar di dalam .icon */
-.icon img {
-  width: 22px;
-  height: 22px;
-  display: block;
-  object-fit: contain;
-}
-
-.card-title {
-  font-weight: 800;
-  color: #111827;
-  font-size: 16.5px;
-  margin-top: 2px;
-}
-.card-text {
-  color: #1f2937;
-  font-size: 14px;
-  line-height: 1.55;
-}
-.card-text.small {
-  font-size: 13px;
-  color: #374151;
-}
+.card-title { font-weight: 800; color: #111827; font-size: 16.5px; margin-top: 2px; }
+.card-text { color: #1f2937; font-size: 14px; line-height: 1.55; }
+.card-text.small { font-size: 13px; color: #374151; }
 
 .bank-box {
   background: #ecfdf5;
@@ -516,13 +541,9 @@ async function copy(text) {
   padding: 10px 12px;
   font-size: 14px;
 }
-.bank-line {
-  margin: 6px 0;
-  color: #0b3b37;
-}
+.bank-line { margin: 6px 0; color: #0b3b37; }
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    'Liberation Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 .copy {
   margin-left: 8px;
@@ -535,11 +556,8 @@ async function copy(text) {
   color: #0b3b37;
   cursor: pointer;
 }
-.copy:hover {
-  background: #f0fdfa;
-}
+.copy:hover { background: #f0fdfa; }
 
-/* QR preview */
 .bank-qr {
   display: inline-flex;
   flex-direction: column;
@@ -556,14 +574,9 @@ async function copy(text) {
   border: 1px solid #93e5dc;
   box-shadow: 0 4px 10px rgba(2, 24, 43, 0.08);
 }
-.bank-qr small {
-  font-size: 11px;
-  opacity: 0.8;
-}
+.bank-qr small { font-size: 11px; opacity: 0.8; }
 
-.cta-row {
-  margin-top: auto;
-}
+.cta-row { margin-top: auto; }
 .btn {
   display: inline-flex;
   align-items: center;
@@ -582,15 +595,8 @@ async function copy(text) {
   border: 0;
   box-shadow: 0 6px 14px rgba(242, 92, 84, 0.25);
 }
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(242, 92, 84, 0.28);
-}
-.btn-primary.outline {
-  background: #fff;
-  color: #f25c54;
-  border: 1px solid #f25c54;
-}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 18px rgba(242, 92, 84, 0.28); }
+.btn-primary.outline { background: #fff; color: #f25c54; border: 1px solid #f25c54; }
 
 /* Separator Gift */
 .gift-sep {
@@ -620,22 +626,13 @@ async function copy(text) {
   box-shadow: var(--shadow);
   padding: clamp(14px, 2vw, 18px);
 }
-.impact-title {
-  font-weight: 800;
-  color: #111827;
-  font-size: 16px;
-}
-.impact-sub {
-  color: #475569;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
+.impact-title { font-weight: 800; color: #111827; font-size: 16px; }
+.impact-sub { color: #475569; font-size: 13px; margin-bottom: 8px; }
 .bar-chart {
   display: flex;
   align-items: flex-end;
   gap: clamp(10px, 2vw, 18px);
-  padding: clamp(12px, 2vw, 18px) clamp(6px, 2vw, 10px)
-    clamp(2px, 1.2vw, 6px);
+  padding: clamp(12px, 2vw, 18px) clamp(6px, 2vw, 10px) clamp(2px, 1.2vw, 6px);
   background: #fff0ff;
   border-radius: 12px;
   border: 1px dashed #f0c2ff;
