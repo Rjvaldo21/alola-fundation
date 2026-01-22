@@ -3,8 +3,8 @@
     <!-- SLIDE (Hero) -->
     <HeroPage />
 
-    <!-- SPOTLIGHT Under News -->
-    <MemberSpotlight :member="member" />
+    <!-- SPOTLIGHT Under News (HANYA tampil jika ada data) -->
+    <MemberSpotlight v-if="member" :member="member" />
 
     <!-- Section News -->
     <section class="container news-sec">
@@ -13,7 +13,6 @@
         <router-link to="/news" class="more">See all →</router-link>
       </div>
 
-      <!-- optional loading kecil -->
       <div v-if="loading" style="padding:10px 0; color:#6b7280; font-size:14px;">
         Loading latest news...
       </div>
@@ -22,7 +21,6 @@
         <NewsCard v-for="n in news" :key="n.id" :news="n" />
       </div>
 
-      <!-- optional error info -->
       <div v-if="errorMsg" style="margin-top:10px; color:#b91c1c; font-size:13px;">
         {{ errorMsg }}
       </div>
@@ -31,183 +29,167 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue'
-  import HeroPage from '../components/HeroPage.vue'
-  import MemberSpotlight from '../components/MemberSpotlight.vue'
-  import NewsCard from '../components/NewsCard.vue'
-  
-  /** ===============================
-   *  CONFIG
-   * =============================== */
-  const API_BASE = 'https://backend-alola.apps06.tic.gov.tl'
-  const NEWS_URL = `${API_BASE}/api/news/`
-  const SUPPORTERS_URL = `${API_BASE}/api/supporters/`
-  
-  /** ===============================
-   *  DUMMY fallback (biar Vercel aman)
-   * =============================== */
-  const DUMMY_NEWS = [
-    {
-      id: 1,
-      title: 'Supporting Education for Girls in Rural Timor-Leste',
-      date: '2024-08-12',
-      excerpt:
-        'Alola Foundation continues to support girls in remote areas with scholarships, school materials, and mentoring programs.',
-      image:
-        'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
-      link: '/news/supporting-education-girls-rural-tl',
-    },
-    {
-      id: 2,
-      title: 'Maternal Health Program Expands to New Districts',
-      date: '2024-07-25',
-      excerpt:
-        'Our maternal health initiatives now reach more mothers with essential care, counseling, and safe delivery support.',
-      image:
-        'https://images.unsplash.com/photo-1526256262350-7da7584cf5eb?q=80&w=900&auto=format&fit=crop',
-      link: '/news/maternal-health-program-expands',
-    },
-    {
-      id: 3,
-      title: 'Women’s Economic Empowerment Through Small Business',
-      date: '2024-06-10',
-      excerpt:
-        'Women entrepreneurs receive training and small grants to grow their businesses and support their families.',
-      image:
-        'https://images.unsplash.com/photo-1542744173-05336fcc7ad4?q=80&w=900&auto=format&fit=crop',
-      link: '/news/womens-economic-empowerment',
-    },
-    {
-      id: 4,
-      title: 'Community Advocacy for Child Protection',
-      date: '2024-05-03',
-      excerpt:
-        'Alola works with community leaders to protect children and raise awareness about their rights.',
-      image:
-        'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?q=80&w=900&auto=format&fit=crop',
-      link: '/news/community-advocacy-child-protection',
-    },
-    {
-      id: 5,
-      title: 'Volunteer Stories: Making a Difference Together',
-      date: '2024-04-18',
-      excerpt:
-        'Volunteers share their experiences supporting Alola’s programs across Timor-Leste.',
-      image:
-        'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=900&auto=format&fit=crop',
-      link: '/news/volunteer-stories',
-    },
-    {
-      id: 6,
-      title: 'New Learning Centre Opens in Dili',
-      date: '2024-03-27',
-      excerpt:
-        'A new learning centre provides safe space for women and children to learn, connect, and grow.',
-      image:
-        'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
-      link: '/news/new-learning-centre-dili',
-    },
-  ]
-  
-  /** ===============================
-   *  STATE
-   * =============================== */
-  const news = ref([...DUMMY_NEWS]) // default dummy dulu, nanti dioverwrite kalau fetch sukses
-  const loading = ref(false)
-  const errorMsg = ref('')
-  
-  /** ===============================
-   *  SPOTLIGHT (dummy fallback)
-   *  NOTE: jadikan ref supaya bisa dioverwrite dari API
-   * =============================== */
-  const member = ref({
-    name: 'KIRSTY SWORD GUSMAO',
-    role:
-      'KIRSTY SWORD GUSMAO: EDUCATION IS VERY IMPORTANT TO SAVE LIVES, SO THE WORK THAT HALIKU DOES IS VERY IMPORTANT.',
-    photo:
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop',
-    bio: [
-      'Thousands of people live in difficult situations because of cancer and this is a concern for all nations...',
-    ],
-    socials: { twitter: '#', facebook: '#', instagram: '#' },
-  })
-  
-  /** ===============================
-   *  HELPERS
-   * =============================== */
-  
-  // API kadang paginated: {results:[...]} atau array langsung
-  function asList(payload) {
-    if (!payload) return []
-    if (Array.isArray(payload)) return payload
-    if (Array.isArray(payload.results)) return payload.results
-    return []
+import { ref, onMounted } from 'vue'
+import HeroPage from '../components/HeroPage.vue'
+import MemberSpotlight from '../components/MemberSpotlight.vue'
+import NewsCard from '../components/NewsCard.vue'
+
+/** ===============================
+ *  CONFIG
+ * =============================== */
+const API_BASE = 'https://backend-alola.apps06.tic.gov.tl'
+const NEWS_URL = `${API_BASE}/api/news/`
+const SUPPORTERS_URL = `${API_BASE}/api/supporters/`
+
+/** ===============================
+ *  DUMMY fallback (NEWS SAJA – TIDAK DIUBAH)
+ * =============================== */
+const DUMMY_NEWS = [
+  {
+    id: 1,
+    title: 'Supporting Education for Girls in Rural Timor-Leste',
+    date: '2024-08-12',
+    excerpt:
+      'Alola Foundation continues to support girls in remote areas with scholarships, school materials, and mentoring programs.',
+    image:
+      'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
+    link: '/news/supporting-education-girls-rural-tl',
+  },
+  {
+    id: 2,
+    title: 'Maternal Health Program Expands to New Districts',
+    date: '2024-07-25',
+    excerpt:
+      'Our maternal health initiatives now reach more mothers with essential care, counseling, and safe delivery support.',
+    image:
+      'https://images.unsplash.com/photo-1526256262350-7da7584cf5eb?q=80&w=900&auto=format&fit=crop',
+    link: '/news/maternal-health-program-expands',
+  },
+  {
+    id: 3,
+    title: 'Women’s Economic Empowerment Through Small Business',
+    date: '2024-06-10',
+    excerpt:
+      'Women entrepreneurs receive training and small grants to grow their businesses and support their families.',
+    image:
+      'https://images.unsplash.com/photo-1542744173-05336fcc7ad4?q=80&w=900&auto=format&fit=crop',
+    link: '/news/womens-economic-empowerment',
+  },
+  {
+    id: 4,
+    title: 'Community Advocacy for Child Protection',
+    date: '2024-05-03',
+    excerpt:
+      'Alola works with community leaders to protect children and raise awareness about their rights.',
+    image:
+      'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?q=80&w=900&auto=format&fit=crop',
+    link: '/news/community-advocacy-child-protection',
+  },
+  {
+    id: 5,
+    title: 'Volunteer Stories: Making a Difference Together',
+    date: '2024-04-18',
+    excerpt:
+      'Volunteers share their experiences supporting Alola’s programs across Timor-Leste.',
+    image:
+      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=900&auto=format&fit=crop',
+    link: '/news/volunteer-stories',
+  },
+  {
+    id: 6,
+    title: 'New Learning Centre Opens in Dili',
+    date: '2024-03-27',
+    excerpt:
+      'A new learning centre provides safe space for women and children to learn, connect, and grow.',
+    image:
+      'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
+    link: '/news/new-learning-centre-dili',
+  },
+]
+
+/** ===============================
+ *  STATE
+ * =============================== */
+const news = ref([...DUMMY_NEWS])
+const loading = ref(false)
+const errorMsg = ref('')
+
+/** ===============================
+ *  SPOTLIGHT (TANPA FALLBACK)
+ * =============================== */
+const member = ref(null)
+
+/** ===============================
+ *  HELPERS
+ * =============================== */
+function asList(payload) {
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload.results)) return payload.results
+  return []
+}
+
+function absUrl(u) {
+  if (!u) return ''
+  const s = String(u)
+  if (s.startsWith('http://') || s.startsWith('https://')) return s
+  if (s.startsWith('/')) return `${API_BASE}${s}`
+  return `${API_BASE}/${s}`
+}
+
+function mapNews(n = {}) {
+  const img = n.cover_image || n.image || n.thumbnail || n.cover || ''
+  const slug = n.slug || n.code || ''
+  return {
+    id: n.id ?? n.pk ?? crypto.randomUUID(),
+    title: n.title || n.name || '',
+    date: n.published_at || n.created_at || n.updated_at || n.date || '',
+    excerpt: n.excerpt || n.summary || n.short_description || '',
+    image: absUrl(img),
+    link: slug ? `/news/${slug}` : '/news',
   }
-  
-  // bikin URL image jadi absolut kalau backend kirim path relatif
-  function absUrl(u) {
-    if (!u) return ''
-    const s = String(u)
-    if (s.startsWith('http://') || s.startsWith('https://')) return s
-    if (s.startsWith('/')) return `${API_BASE}${s}`
-    return `${API_BASE}/${s}`
-  }
-  
-  // map response news -> format NewsCard kamu
-  function mapNews(n = {}) {
-    const img = n.cover_image || n.image || n.thumbnail || n.cover || ''
-    const slug = n.slug || n.code || ''
-    return {
-      id: n.id ?? n.pk ?? crypto.randomUUID(),
-      title: n.title || n.name || '',
-      date: n.published_at || n.created_at || n.updated_at || n.date || '',
-      excerpt: n.excerpt || n.summary || n.short_description || '',
-      image: absUrl(img),
-      link: slug ? `/news/${slug}` : '/news',
+}
+
+/** ===============================
+ *  FETCH LATEST NEWS
+ * =============================== */
+async function fetchLatestNews() {
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    const url = new URL(NEWS_URL)
+    url.searchParams.set('page_size', '6')
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const data = await res.json()
+    const rows = asList(data).slice(0, 6).map(mapNews)
+
+    if (rows.length) {
+      news.value = rows
+    } else {
+      errorMsg.value = 'News API returned empty list. Showing default content.'
     }
+  } catch (e) {
+    console.warn('[HomePage] Failed to fetch latest news:', e)
+    errorMsg.value = 'Cannot load latest news from server. Showing default content.'
+  } finally {
+    loading.value = false
   }
-  
-  /** ===============================
-   *  FETCH LATEST NEWS
-   * =============================== */
-  async function fetchLatestNews() {
-    loading.value = true
-    errorMsg.value = ''
-    try {
-      const url = new URL(NEWS_URL)
-      url.searchParams.set('page_size', '6')
-  
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      })
-  
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  
-      const data = await res.json()
-      const rows = asList(data).slice(0, 6).map(mapNews)
-  
-      if (rows.length) {
-        news.value = rows
-      } else {
-        errorMsg.value = 'News API returned empty list. Showing default content.'
-      }
-    } catch (e) {
-      console.warn('[HomePage] Failed to fetch latest news:', e)
-      errorMsg.value = 'Cannot load latest news from server. Showing default content.'
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  /** ===============================
-   *  FETCH SUPPORTERS (Spotlight)
-   *  sesuai API: /api/supporters/ -> {results:[{name,logo,link_url,order}]}
-   * =============================== */
-   async function fetchSupporter() {
+}
+
+/** ===============================
+ *  FETCH SUPPORTERS (Spotlight)
+ *  🔥 PERBAIKAN NOMOR 1 & 2 ADA DI SINI
+ * =============================== */
+async function fetchSupporter() {
   try {
     const url = new URL(SUPPORTERS_URL)
-    // optional: ambil yang paling atas berdasarkan order
     url.searchParams.set('ordering', 'order')
 
     const res = await fetch(url.toString(), {
@@ -218,42 +200,37 @@
 
     const data = await res.json()
     const rows = asList(data)
-
     if (!rows.length) return
 
     const top = rows[0]
 
-    // ✅ TAMBAHAN BARU: ambil bio_html jadi array paragraf (text saja)
     const bioText = (top.bio_html || '').trim()
     const bioParts = bioText
       ? bioText.split(/\r?\n\r?\n+/).map(s => s.trim()).filter(Boolean)
       : []
 
-    // overwrite hanya field yang memang ada di API
     member.value = {
-      ...member.value,
-      name: top.name || member.value.name,
-      photo: top.logo ? absUrl(top.logo) : member.value.photo,
-
-      // ✅ TAMBAHAN BARU: isi bio dari API kalau ada
-      bio: bioParts.length ? bioParts : member.value.bio,
-
+      name: top.name,
+      role: bioParts[0] || '',            // ✅ TEXT KECIL (PARAGRAF PERTAMA)
+      bio: bioParts.slice(1),              // ✅ ISI PARAGRAF
+      photo: top.logo ? absUrl(top.logo) : '',
       socials: {
-        ...member.value.socials,
-        facebook: top.link_url || member.value.socials.facebook,
+        facebook: top.link_url || '',
+        twitter: '',
+        instagram: '',
       },
     }
   } catch (e) {
     console.warn('[HomePage] Failed to fetch supporters:', e)
-    // fallback tetap dummy (jangan ubah apa-apa)
+    member.value = null
   }
 }
-  
-  onMounted(() => {
-    fetchLatestNews()
-    fetchSupporter()
-  })
-  </script>  
+
+onMounted(() => {
+  fetchLatestNews()
+  fetchSupporter()
+})
+</script>
 
 <style scoped>
 .news-sec {
@@ -279,25 +256,40 @@
   text-decoration: underline;
 }
 
-/* bikin kolom foto lebih besar */
-.spotlight-grid {
-  grid-template-columns: 520px 1fr; /* sebelumnya mungkin 360px 1fr */
+/* 🔥 PAKSA FOTO BESAR */
+:deep(.member-spotlight img) {
+  width: 520px !important;
+  height: 620px !important;
+  object-fit: cover !important;
+  border-radius: 18px !important;
 }
 
-/* bikin foto lebih besar & tinggi */
-.spotlight-photo {
-  width: 520px;
-  height: 520px;      /* kalau mau lebih panjang: 600px */
-  border-radius: 18px;
-  overflow: hidden;
+/* 🔥 PAKSA ROLE (text besar) jadi kecil */
+:deep(.member-spotlight h1),
+:deep(.member-spotlight h2),
+:deep(.member-spotlight .title),
+:deep(.member-spotlight .role),
+:deep(.member-spotlight .headline) {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  color: #6b7280 !important;
+  letter-spacing: .02em !important;
+  text-transform: none !important;
+  margin: 8px 0 16px !important;
 }
 
-/* gambar memenuhi box */
-.spotlight-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;   /* penting biar tidak ketarik */
-  display: block;
+:deep(.member-spotlight .name){
+  font-size: 28px !important;     /* ubah sesuai selera: 24-32 */
+  line-height: 1.15 !important;
+  text-transform: none !important; /* kalau ada uppercase */
+  letter-spacing: 0 !important;
+  margin: 0 0 10px !important;
+}
+
+:deep(.member-spotlight .para){
+  font-size: 14px !important;
+  line-height: 1.7 !important;
 }
 
 </style>
