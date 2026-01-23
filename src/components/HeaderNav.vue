@@ -145,7 +145,10 @@ const menus = [
     name: 'home',
     children: [
     { label: 'Welcome – Bemvindo', to: '/page/welcome' },
-    { label: 'Chairwomen’s Statement', to: '/page/chairwomens-statement' },
+    { 
+      label: 'Chairwomen’s Statement',
+      to: '/page/chairwomens-statement-kirstyswordgusmao'
+    },
     { label: 'CEO’s Remarks', to: '/page/ceos-remarks' },
       { label: 'About Us',to: '/about',
         children: [

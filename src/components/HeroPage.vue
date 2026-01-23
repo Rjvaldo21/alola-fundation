@@ -3,9 +3,7 @@
     <!-- === CLUSTER DEKOR PERSIS MOCK === -->
     <div class="about-cluster">
       <span class="soft d1"></span>
-
       <span class="soft d2"></span>
-
       <span class="dotgrid"></span>
     </div>
 
@@ -25,7 +23,7 @@
           }}
         </p>
 
-        <!-- Accordion -->
+        <!-- Accordion (HANYA TITLE + LINK KE PAGE, TANPA KONTEN PANJANG) -->
         <div class="cta-accordion cards" ref="accGroup">
           <details
             v-for="(it, idx) in accordion"
@@ -33,7 +31,21 @@
             class="toggle card"
           >
             <summary class="chev">{{ it.title }}</summary>
-            <div class="panel prose" v-html="it.body_html || it.content_html || ''"></div>
+
+            <!-- ✅ Jangan tampilkan body_html/content_html di Home -->
+            <div class="panel prose">
+              <RouterLink
+                v-if="it.page_slug"
+                class="readmore"
+                :to="`/page/${it.page_slug}`"
+              >
+                Read full → 
+              </RouterLink>
+
+              <span v-else class="readmore disabled">
+                Page not linked
+              </span>
+            </div>
           </details>
         </div>
       </div>
@@ -83,79 +95,84 @@
 </template>
 
 <script setup>
-  import {
-    ref,
-    computed,
-    onMounted,
-    onBeforeUnmount,
-    nextTick,
-    watch,
-  } from 'vue'
-  import axios from 'axios'
-  
-  /* ===============================
-     HERO STATIC / DUMMY (AMAN)
-  ================================ */
-  const heroTitle = ref('Message from Our Founder & CEO')
-  const heroSubtitle = ref(
-    'A reflection on Alola Foundation’s vision, mission, and long-term commitment to empowering women and strengthening communities in Timor-Leste.'
-  )
-  
-  // Slides (tetap dummy)
-  const slides = ref([
-    {
-      id: 1,
-      title: 'Empowering Women & Children',
-      subtitle:
-        'Alola Foundation works to improve the lives of women and children in Timor-Leste.',
-      image: '',
-      video: '',
-      youtube: 'https://youtu.be/csaObXq0Fhc?si=CsaCA8p4M6N08sLw',
-    },
-  ])
-  
-  const current = computed(() => slides.value[0] || {})
-  
-  /* ===============================
-     ACCORDION (API + FALLBACK)
-  ================================ */
-  
-  // Dummy fallback (JANGAN dihapus)
-  const dummyAccordion = [
-    {
-      id: 1,
-      title: 'MENSAGEM KIRSTY SWORD GUSMÃO...',
-      body_html: `
-        <p>Email: <a href="mailto:info@alola.tl">info@alola.tl</a></p>
-        <p>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-          Alola Foundation supports education, maternal and child health, 
-          economic empowerment and advocacy programs across Timor-Leste.
-        </p>
-      `,
-    },
-    {
-      id: 2,
-      title: 'A MESSAGE FROM CEO ALOLA',
-      body_html: `
-        <p>
-          Welcome to the Alola Foundation. Our mission is to improve the lives of 
-          women and children through education, advocacy and community programs.
-        </p>
-        <p>
-          Together we can build a stronger future for Timor-Leste.
-        </p>
-      `,
-    },
-  ]
-  
-  // State accordion (dipakai template)
-  const accordion = ref([...dummyAccordion])
-  
-  /* ===============================
-     FETCH ACCORDION API
-  ================================ */
-  async function loadAccordion() {
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  watch,
+} from 'vue'
+import axios from 'axios'
+
+/* ===============================
+   HERO STATIC / DUMMY (AMAN)
+================================ */
+const heroTitle = ref('Message from Our Founder & CEO')
+const heroSubtitle = ref(
+  'A reflection on Alola Foundation’s vision, mission, and long-term commitment to empowering women and strengthening communities in Timor-Leste.'
+)
+
+// Slides (tetap dummy)
+const slides = ref([
+  {
+    id: 1,
+    title: 'Empowering Women & Children',
+    subtitle:
+      'Alola Foundation works to improve the lives of women and children in Timor-Leste.',
+    image: '',
+    video: '',
+    youtube: 'https://youtu.be/csaObXq0Fhc?si=CsaCA8p4M6N08sLw',
+  },
+])
+
+const current = computed(() => slides.value[0] || {})
+
+/* ===============================
+   ACCORDION (API + FALLBACK)
+================================ */
+
+// Dummy fallback (JANGAN dihapus)
+const dummyAccordion = [
+  {
+    id: 1,
+    title: 'MENSAGEM KIRSTY SWORD GUSMÃO...',
+    page_slug: 'chairwomens-statement-kirstyswordgusmao', // ✅ sesuaikan bila perlu
+    body_html: `
+      <p>
+        Lorem ipsum...
+      </p>
+    `,
+  },
+  {
+    id: 2,
+    title: 'A MESSAGE FROM CEO ALOLA',
+    page_slug: 'ceos-remarks', // ✅ sesuaikan dengan slug page kamu
+    body_html: `
+      <p>
+        Lorem ipsum...
+      </p>
+    `,
+  },
+  {
+    id: 3,
+    title: 'CHAIRWOMEN STATEMENT',
+    page_slug: 'chairwomens-statement-kirstyswordgusmao', // ✅ ini slug kamu dari API pages
+    body_html: `
+      <p>
+        Lorem ipsum...
+      </p>
+    `,
+  },
+]
+
+// State accordion (dipakai template)
+const accordion = ref([...dummyAccordion])
+
+/* ===============================
+   FETCH ACCORDION API
+================================ */
+async function loadAccordion() {
   try {
     const res = await axios.get(
       'https://backend-alola.apps06.tic.gov.tl/api/accordion-items/'
@@ -167,92 +184,106 @@
       ? res.data.results
       : []
 
-    if (data.length) {
-      accordion.value = data.map((it) => ({
+      if (data.length) {
+      const mapped = data.map((it) => ({
         id: it.id,
         title: it.title,
+        page_slug:
+          it?.page?.slug ||
+          it?.page_slug ||
+          it?.pageSlug ||
+          '',
         body_html: it.body_html || it.content_html || '',
         content_html: it.content_html || it.body_html || '',
       }))
+
+      accordion.value = mapped.filter((x) => {
+        const slug = (x.page_slug || '').toLowerCase()
+        const title = (x.title || '').toLowerCase()
+        if (slug === 'chairwomens-statement-kirstyswordgusmao') return false
+        if (title.includes('chairwomen')) return false
+
+        return true
+      })
     }
   } catch (err) {
     console.warn('⚠️ Accordion API failed, using fallback dummy data', err)
     accordion.value = [...dummyAccordion]
   }
 }
-  
-  /* ===============================
-     YOUTUBE UTILS (TIDAK DIUBAH)
-  ================================ */
-  const extractId = (urlOrId) => {
-    if (!urlOrId) return ''
-    let v = String(urlOrId).trim()
-    if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v
-    const rules = [
-      /youtu\.be\/([A-Za-z0-9_-]{11})/,
-      /[?&]v=([A-Za-z0-9_-]{11})/,
-      /\/embed\/([A-Za-z0-9_-]{11})/,
-      /\/shorts\/([A-Za-z0-9_-]{11})/,
-    ]
-    for (const r of rules) {
-      const m = v.match(r)
-      if (m && m[1]) return m[1]
-    }
-    const any = v.match(/([A-Za-z0-9_-]{11})/)
-    return any ? any[1] : ''
+
+/* ===============================
+   YOUTUBE UTILS
+================================ */
+const extractId = (urlOrId) => {
+  if (!urlOrId) return ''
+  let v = String(urlOrId).trim()
+  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v
+  const rules = [
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /[?&]v=([A-Za-z0-9_-]{11})/,
+    /\/embed\/([A-Za-z0-9_-]{11})/,
+    /\/shorts\/([A-Za-z0-9_-]{11})/,
+  ]
+  for (const r of rules) {
+    const m = v.match(r)
+    if (m && m[1]) return m[1]
   }
-  
-  const heroYtId = computed(() => extractId(current.value.youtube))
-  
-  const embedUrl = (id) => {
-    const v = extractId(id)
-    if (!v) return ''
-    const qs = new URLSearchParams({
-      autoplay: '1',
-      mute: '1',
-      controls: '0',
-      rel: '0',
-      modestbranding: '1',
-      playsinline: '1',
-      loop: '1',
-      playlist: v,
-    })
-    return `https://www.youtube-nocookie.com/embed/${v}?${qs.toString()}`
-  }
-  
-  /* ===============================
-    ACCORDION UI TOGGLE
-  ================================ */
-  const accGroup = ref(null)
-  let detach = () => {}
-  
-  async function bindAccordionToggles() {
-    await nextTick()
-    const root = accGroup.value
-    if (!root) return
-  
-    const items = Array.from(root.querySelectorAll('details.toggle'))
-    const onToggle = (ev) => {
-      const t = ev.currentTarget
-      if (!t.open) return
-      items.forEach((d) => {
-        if (d !== t) d.open = false
-      })
-    }
-    items.forEach((d) => d.addEventListener('toggle', onToggle))
-    detach = () =>
-      items.forEach((d) => d.removeEventListener('toggle', onToggle))
-  }
-  
-  watch(accordion, () => bindAccordionToggles())
-  
-  onMounted(async () => {
-    await loadAccordion()
-    await bindAccordionToggles()
+  const any = v.match(/([A-Za-z0-9_-]{11})/)
+  return any ? any[1] : ''
+}
+
+const heroYtId = computed(() => extractId(current.value.youtube))
+
+const embedUrl = (id) => {
+  const v = extractId(id)
+  if (!v) return ''
+  const qs = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    controls: '0',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    loop: '1',
+    playlist: v,
   })
-  
-  onBeforeUnmount(() => detach())
-</script>  
+  return `https://www.youtube-nocookie.com/embed/${v}?${qs.toString()}`
+}
+
+/* ===============================
+  ACCORDION UI TOGGLE
+================================ */
+const accGroup = ref(null)
+let detach = () => {}
+
+async function bindAccordionToggles() {
+  await nextTick()
+  const root = accGroup.value
+  if (!root) return
+
+  const items = Array.from(root.querySelectorAll('details.toggle'))
+  const onToggle = (ev) => {
+    const t = ev.currentTarget
+    if (!t.open) return
+    items.forEach((d) => {
+      if (d !== t) d.open = false
+    })
+  }
+  items.forEach((d) => d.addEventListener('toggle', onToggle))
+  detach = () =>
+    items.forEach((d) => d.removeEventListener('toggle', onToggle))
+}
+
+watch(accordion, () => bindAccordionToggles())
+
+onMounted(async () => {
+  await loadAccordion()
+  await bindAccordionToggles()
+})
+
+onBeforeUnmount(() => detach())
+</script>
 
 <style scoped>
 /* === General Style === */
@@ -281,7 +312,7 @@
 /* === Cluster Mock === */
 .about-cluster{
   position:absolute; inset:0;
-  z-index:0;           
+  z-index:0;
   pointer-events:none;
   transform: translateZ(0);
 }
@@ -290,7 +321,7 @@
   position:absolute; aspect-ratio:1/1;
   transform: rotate(45deg);
   border-radius: 28px;
-  background: #eefdff;    
+  background: #eefdff;
   filter: saturate(105%);
 }
 .about-cluster .soft.d1{
@@ -331,7 +362,7 @@
   width: var(--diamond-size); aspect-ratio:1/1;
 
   --ring: clamp(16px, 1.6vw, 26px);
-  --r-outer: 48px;                 
+  --r-outer: 48px;
   --r-inner: calc(var(--r-outer) - var(--ring));
 }
 
@@ -339,7 +370,7 @@
   position:absolute; inset:0;
   transform:rotate(45deg);
   border-radius: var(--r-outer);
-  background: transparent;       
+  background: transparent;
 }
 .border::before{
   content:"";
@@ -355,7 +386,7 @@
   position:absolute;
   inset: var(--ring);
   border-radius: var(--r-inner);
-  background: #ffffff;           
+  background: #ffffff;
 }
 
 .diamond{
@@ -391,11 +422,27 @@ iframe.yt{ pointer-events:auto; }
 .chev::before{ content:""; width:.55em; height:.55em; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform: rotate(-45deg); opacity:.28; margin-right:2px; }
 .chev::after{ content:""; margin-left:auto; width:.6em; height:.6em; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform: rotate(-45deg); transition: transform .2s ease; }
 .toggle.card[open] .chev::after{ transform: rotate(45deg); }
-.panel{ padding: 0 16px 14px 16px; color:#374151; line-height:1.7; text-wrap: pretty; hyphens:auto; max-height: clamp(180px, 28vh, 360px); overflow:auto; -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%); }
-.prose p{ margin: 10px 0; }
-.panel::-webkit-scrollbar{ width:8px }
-.panel::-webkit-scrollbar-thumb{ background:#cfe8ff; border-radius:8px }
-.panel::-webkit-scrollbar-thumb:hover{ background:#a8d4ff }
+
+/* ✅ panel sekarang hanya link */
+.panel{
+  padding: 0 16px 14px 16px;
+  color:#374151;
+  line-height:1.7;
+}
+.readmore{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin-top: 6px;
+  text-decoration:none;
+  font-weight:700;
+  color:#0d6efd;
+}
+.readmore:hover{ text-decoration: underline; }
+.readmore.disabled{
+  color:#9ca3af;
+  font-weight:600;
+}
 
 @media (max-width: 1280px){
   .hero{
@@ -416,7 +463,6 @@ iframe.yt{ pointer-events:auto; }
   .container.hero-inner{ padding-right: 0; }
   .cta-accordion.cards{ gap:10px }
   .chev{ padding:11px 14px }
-  .panel{ max-height: 40vh }
 
   .diamond-wrap{
     position:relative; right:auto; top:auto; margin:18px auto 0;
