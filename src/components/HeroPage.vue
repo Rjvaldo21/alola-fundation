@@ -33,19 +33,7 @@
             <summary class="chev">{{ it.title }}</summary>
 
             <!-- ✅ Jangan tampilkan body_html/content_html di Home -->
-            <div class="panel prose">
-              <RouterLink
-                v-if="it.page_slug"
-                class="readmore"
-                :to="`/page/${it.page_slug}`"
-              >
-                Read full → 
-              </RouterLink>
-
-              <span v-else class="readmore disabled">
-                Page not linked
-              </span>
-            </div>
+            <div class="panel prose" v-html="it.preview_html"></div>
           </details>
         </div>
       </div>
@@ -185,17 +173,24 @@ async function loadAccordion() {
       : []
 
       if (data.length) {
-      const mapped = data.map((it) => ({
-        id: it.id,
-        title: it.title,
-        page_slug:
-          it?.page?.slug ||
-          it?.page_slug ||
-          it?.pageSlug ||
-          '',
-        body_html: it.body_html || it.content_html || '',
-        content_html: it.content_html || it.body_html || '',
-      }))
+        const mapped = data.map((it) => {
+        const html = it.content_html || it.body_html || ''
+        return {
+          id: it.id,
+          title: it.title,
+          page_slug: it?.page?.slug || it?.page_slug || it?.pageSlug || '',
+          body_html: it.body_html || it.content_html || '',
+          content_html: it.content_html || it.body_html || '',
+          // ✅ tampilkan ringkas di Home (biar tidak panjang)
+          preview_html: makePreview(html, 280),
+        }
+      })
+
+      function makePreview(html = '', limit = 280) {
+        const text = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        const cut = text.length > limit ? text.slice(0, limit).trim() + '…' : text
+        return cut ? `<p>${cut}</p>` : `<p></p>`
+      }
 
       accordion.value = mapped.filter((x) => {
         const slug = (x.page_slug || '').toLowerCase()
