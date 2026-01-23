@@ -42,75 +42,9 @@ const NEWS_URL = `${API_BASE}/api/news/`
 const SUPPORTERS_URL = `${API_BASE}/api/supporters/`
 
 /** ===============================
- *  DUMMY fallback (NEWS SAJA – TIDAK DIUBAH)
- * =============================== */
-const DUMMY_NEWS = [
-  {
-    id: 1,
-    title: 'Supporting Education for Girls in Rural Timor-Leste',
-    date: '2024-08-12',
-    excerpt:
-      'Alola Foundation continues to support girls in remote areas with scholarships, school materials, and mentoring programs.',
-    image:
-      'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
-    link: '/news/supporting-education-girls-rural-tl',
-  },
-  {
-    id: 2,
-    title: 'Maternal Health Program Expands to New Districts',
-    date: '2024-07-25',
-    excerpt:
-      'Our maternal health initiatives now reach more mothers with essential care, counseling, and safe delivery support.',
-    image:
-      'https://images.unsplash.com/photo-1526256262350-7da7584cf5eb?q=80&w=900&auto=format&fit=crop',
-    link: '/news/maternal-health-program-expands',
-  },
-  {
-    id: 3,
-    title: 'Women’s Economic Empowerment Through Small Business',
-    date: '2024-06-10',
-    excerpt:
-      'Women entrepreneurs receive training and small grants to grow their businesses and support their families.',
-    image:
-      'https://images.unsplash.com/photo-1542744173-05336fcc7ad4?q=80&w=900&auto=format&fit=crop',
-    link: '/news/womens-economic-empowerment',
-  },
-  {
-    id: 4,
-    title: 'Community Advocacy for Child Protection',
-    date: '2024-05-03',
-    excerpt:
-      'Alola works with community leaders to protect children and raise awareness about their rights.',
-    image:
-      'https://images.unsplash.com/photo-1509099863731-ef4bff19e808?q=80&w=900&auto=format&fit=crop',
-    link: '/news/community-advocacy-child-protection',
-  },
-  {
-    id: 5,
-    title: 'Volunteer Stories: Making a Difference Together',
-    date: '2024-04-18',
-    excerpt:
-      'Volunteers share their experiences supporting Alola’s programs across Timor-Leste.',
-    image:
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=900&auto=format&fit=crop',
-    link: '/news/volunteer-stories',
-  },
-  {
-    id: 6,
-    title: 'New Learning Centre Opens in Dili',
-    date: '2024-03-27',
-    excerpt:
-      'A new learning centre provides safe space for women and children to learn, connect, and grow.',
-    image:
-      'https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=900&auto=format&fit=crop',
-    link: '/news/new-learning-centre-dili',
-  },
-]
-
-/** ===============================
  *  STATE
  * =============================== */
-const news = ref([...DUMMY_NEWS])
+const news = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -173,11 +107,13 @@ async function fetchLatestNews() {
     if (rows.length) {
       news.value = rows
     } else {
-      errorMsg.value = 'News API returned empty list. Showing default content.'
+      news.value = []
+      errorMsg.value = 'News API returned empty list.'
     }
   } catch (e) {
     console.warn('[HomePage] Failed to fetch latest news:', e)
-    errorMsg.value = 'Cannot load latest news from server. Showing default content.'
+    news.value = []
+    errorMsg.value = 'Cannot load latest news from server.'
   } finally {
     loading.value = false
   }
