@@ -120,6 +120,9 @@ const routes = [
   { path: '/about/alola-australia', name: 'about-alola-australia', component: AboutAlolaAustralia },
   { path: '/about/jobs', name: 'about-jobs', component: AboutJobs },
 
+  // ================= Dynamic Pages (CMS) =================
+  { path: '/page/:slug', name: 'page-slug', component: () => import('@/pages/PageSlug.vue'), props: true },
+
   // ================= 404 =================
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/NotFound.vue') },
 ]

@@ -1,8 +1,14 @@
 import axios from 'axios'
 
-// Ambil dari env saat build (PROD). Saat dev tanpa env, fallback ke '/api/' (proxy Vite)
 const ENV_BASE = (import.meta.env?.VITE_API_BASE_URL || '').trim()
-const BASE_URL = ENV_BASE || '/api/'
+
+// ✅ Kalau env tidak ada (misalnya di Vercel belum diset), fallback ke backend production API
+const FALLBACK_PROD = 'https://backend-alola.apps06.tic.gov.tl/api/'
+
+// ✅ Dev: kamu boleh tetap pakai proxy '/api/' kalau mau
+const isDev = import.meta.env.DEV
+
+const BASE_URL = ENV_BASE || (isDev ? '/api/' : FALLBACK_PROD)
 
 // Pastikan selalu berakhiran '/'
 const normalizedBase = BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/'
@@ -12,7 +18,6 @@ export const api = axios.create({
   timeout: 15000,
 })
 
-// Helper untuk membuat URL absolut (berguna untuk gambar/file dari API)
 export function absUrl(path) {
   if (!path) return ''
   if (/^https?:\/\//i.test(path)) return path

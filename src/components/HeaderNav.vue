@@ -144,9 +144,9 @@ const menus = [
     to: '/',
     name: 'home',
     children: [
-      { label: 'Welcome – Bemvindo', to: '/welcome' },
-      { label: 'Chairwomen’s Statement', to: '/chairwomens-statement' },
-      { label: 'CEO’s Remarks', to: '/ceos-remarks' },
+    { label: 'Welcome – Bemvindo', to: '/page/welcome' },
+    { label: 'Chairwomen’s Statement', to: '/page/chairwomens-statement' },
+    { label: 'CEO’s Remarks', to: '/page/ceos-remarks' },
       { label: 'About Us',to: '/about',
         children: [
           { label: 'Founder', to: '/about/founder' },

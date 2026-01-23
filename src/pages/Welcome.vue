@@ -1,7 +1,7 @@
 <template>
     <main class="page">
-      <header class="hero"><h1>Welcome – Bemvindo</h1><p class="lead">Selamat datang di Alola Foundation.</p></header>
-      <section class="content">Konten welcome…</section>
+      <header class="hero"><h1>Welcome – Bemvindo</h1><p class="lead">BemVindo iha Alola Foundation.</p></header>
+      <section class="content">Content welcome…</section>
     </main>
   </template>
   <script setup></script>
