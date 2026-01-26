@@ -182,7 +182,7 @@ async function loadAccordion() {
           body_html: it.body_html || it.content_html || '',
           content_html: it.content_html || it.body_html || '',
           // ✅ tampilkan ringkas di Home (biar tidak panjang)
-          preview_html: makePreview(html, 280),
+          preview_html: makePreview(html, 900),
         }
       })
 
