@@ -151,22 +151,7 @@ const next = () => goTo(current.value + 1)
 const prev = () => goTo(current.value - 1)
 
 /* Gallery (Defaults) */
-const gallery = ref([
-  'https://images.unsplash.com/photo-1530099486328-e021101a494a?q=80&w=600&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1530099486328-e021101a494a?q=80&w=600&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1530099486328-e021101a494a?q=80&w=600&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1530099486328-e021101a494a?q=80&w=600&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=600&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1530099486328-e021101a494a?q=80&w=600&auto=format&fit=crop'
-])
-
-/* Accordion (Defaults) */
-const sections = ref([
-  { id:'consult', title:'Consultation & Socialization', open:true,  content:`<p>Community and stakeholder consultations shape the integrated design.</p>` },
-  { id:'fgd',     title:'Focus Group Discussion (FGD)', open:false, content:`<p>FGDs identify barriers and co-develop interventions.</p>` },
-  { id:'launch',  title:'Project Launch',                open:false, content:`<p>Programs are launched with partners, targets, and monitoring plans.</p>` },
-  { id:'mch',     title:'MCH Interventions',             open:false, content:`<p>Coaching, referrals, and behavior change communication.</p>` },
-])
+const gallery = ref([])
 
 /* ======= Helpers & Normalizers ======= */
 const coalesce = (...vals) => {
@@ -203,6 +188,17 @@ async function fetchMaybe(url){
   try { const { data } = await api.get(url); return data } catch { return null }
 }
 
+/* ✅ NEW: fetch album gallery by slug from /api/gallery/ */
+async function fetchAlbumBySlug(slug){
+  try {
+    const { data } = await api.get('gallery/')
+    const list = Array.isArray(data?.results) ? data.results : []
+    return list.find(a => a.slug === slug) || null
+  } catch (e) {
+    return null
+  }
+}
+
 /* ======= Fetch On Mount ======= */
 onMounted(async () => {
   try {
@@ -234,13 +230,29 @@ onMounted(async () => {
     if (normSlides.length) slides.value = normSlides
     current.value = 0
 
-    // GALLERY
+    // GALLERY (existing)
     const rawGallery =
       (Array.isArray(gal?.results) ? gal.results : gal) ||
       (Array.isArray(combined?.gallery?.results) ? combined.gallery.results : combined?.gallery) ||
       []
     const normGal = normGalleryArray(rawGallery)
     if (normGal.length) gallery.value = normGal
+
+    // ✅ NEW: if no gallery from above, fetch from /api/gallery/ album slug
+    if (!normGal.length) {
+      const album = await fetchAlbumBySlug('integration-approach')
+
+      const items = Array.isArray(album?.items) ? album.items : []
+      const itemImgs = items
+        .map(it => absUrl(coalesce(it.image, it.image_url, it.file, it.url, '')))
+        .filter(Boolean)
+
+      if (itemImgs.length) {
+        gallery.value = itemImgs
+      } else if (album?.cover_image) {
+        gallery.value = [absUrl(album.cover_image)]
+      }
+    }
 
     // SECTIONS
     const rawSections =
@@ -385,7 +397,5 @@ onMounted(async () => {
 .acc-inner .prose > :first-child{ margin-top:0; }
 .acc-inner .prose > :last-child{ margin-bottom:0; }
 
-
-/* Error */
 .error{ color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; border-radius:10px; padding:10px 12px; margin-top:10px; }
 </style>

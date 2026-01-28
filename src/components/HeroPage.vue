@@ -181,7 +181,6 @@ async function loadAccordion() {
           page_slug: it?.page?.slug || it?.page_slug || it?.pageSlug || '',
           body_html: it.body_html || it.content_html || '',
           content_html: it.content_html || it.body_html || '',
-          // ✅ tampilkan ringkas di Home (biar tidak panjang)
           preview_html: makePreview(html, 900),
         }
       })
@@ -281,7 +280,6 @@ onBeforeUnmount(() => detach())
 </script>
 
 <style scoped>
-/* === General Style === */
 .hero{
   position:relative; overflow:hidden; width:100%;
   min-height: clamp(560px, 78vh, 820px);
@@ -418,7 +416,6 @@ iframe.yt{ pointer-events:auto; }
 .chev::after{ content:""; margin-left:auto; width:.6em; height:.6em; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform: rotate(-45deg); transition: transform .2s ease; }
 .toggle.card[open] .chev::after{ transform: rotate(45deg); }
 
-/* ✅ panel sekarang hanya link */
 .panel{
   padding: 0 16px 14px 16px;
   color:#374151;

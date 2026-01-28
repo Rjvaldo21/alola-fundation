@@ -27,7 +27,6 @@
   
       <!-- LIST -->
       <main class="gc-container gc-list">
-        <!-- Skeleton saat loading -->
         <template v-if="isLoading">
           <article v-for="n in 3" :key="'sk'+n" class="gift-card is-skeleton">
             <div class="card-media">
@@ -83,8 +82,6 @@
               </div>
             </div>
           </article>
-  
-          <!-- Error state (opsional) -->
           <p v-if="errorMsg" class="gc-error">{{ errorMsg }}</p>
         </template>
       </main>
@@ -94,10 +91,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, absUrl } from '@/api'   // ⬅️ pakai helper API kita
+import { api, absUrl } from '@/api'   
 
 const props = defineProps({
-  // gunakan path relatif karena baseURL sudah diset di api.js
   apiUrl: { type: String, default: 'gifts/' }
 })
 

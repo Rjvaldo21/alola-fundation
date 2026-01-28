@@ -87,7 +87,7 @@ const props = defineProps({
 });
 
 // ---- image fallback ----
-const FALLBACK_PHOTO = "/placeholder-person.jpg"; // taruh file ini di /public/ (atau ganti sesuai asetmu)
+const FALLBACK_PHOTO = "/placeholder-person.jpg";
 const photoSrc = ref(props.member?.photo || FALLBACK_PHOTO);
 const imgLoading = ref(true);
 

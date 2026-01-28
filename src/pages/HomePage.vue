@@ -3,7 +3,7 @@
     <!-- SLIDE (Hero) -->
     <HeroPage />
 
-    <!-- SPOTLIGHT Under News (HANYA tampil jika ada data) -->
+    <!-- SPOTLIGHT Under News -->
     <MemberSpotlight v-if="member" :member="member" />
 
     <!-- Section News -->
@@ -49,7 +49,7 @@ const loading = ref(false)
 const errorMsg = ref('')
 
 /** ===============================
- *  SPOTLIGHT (TANPA FALLBACK)
+ *  SPOTLIGHT (WITHOUT FALLBACK)
  * =============================== */
 const member = ref(null)
 
@@ -121,7 +121,6 @@ async function fetchLatestNews() {
 
 /** ===============================
  *  FETCH SUPPORTERS (Spotlight)
- *  🔥 PERBAIKAN NOMOR 1 & 2 ADA DI SINI
  * =============================== */
 async function fetchSupporter() {
   try {
@@ -147,8 +146,8 @@ async function fetchSupporter() {
 
     member.value = {
       name: top.name,
-      role: bioParts[0] || '',            // ✅ TEXT KECIL (PARAGRAF PERTAMA)
-      bio: bioParts.slice(1),              // ✅ ISI PARAGRAF
+      role: bioParts[0] || '',            
+      bio: bioParts.slice(1),              
       photo: top.logo ? absUrl(top.logo) : '',
       socials: {
         facebook: top.link_url || '',
@@ -192,7 +191,6 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-/* 🔥 PAKSA FOTO BESAR */
 :deep(.member-spotlight img) {
   width: 520px !important;
   height: 620px !important;
@@ -200,7 +198,6 @@ onMounted(() => {
   border-radius: 18px !important;
 }
 
-/* 🔥 PAKSA ROLE (text besar) jadi kecil */
 :deep(.member-spotlight h1),
 :deep(.member-spotlight h2),
 :deep(.member-spotlight .title),
@@ -216,9 +213,9 @@ onMounted(() => {
 }
 
 :deep(.member-spotlight .name){
-  font-size: 28px !important;     /* ubah sesuai selera: 24-32 */
+  font-size: 28px !important;     
   line-height: 1.15 !important;
-  text-transform: none !important; /* kalau ada uppercase */
+  text-transform: none !important; 
   letter-spacing: 0 !important;
   margin: 0 0 10px !important;
 }
